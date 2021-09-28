@@ -550,8 +550,12 @@ breed_list = %sql SELECT DISTINCT breed FROM dogs ORDER BY breed;
 
 
 ```python
-%%sql
+breed_list = %sql SELECT DISTINCT breed FROM dogs ORDER BY breed;
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    2006 rows affected.
+
 
 Once your variable is created, using the above command tell Jupyter to format the variable as a csv file using the following syntax:
 
@@ -571,8 +575,15 @@ When you do this, all of the results of the query will be saved in the text file
 
 
 ```python
-%%sql
+breed_list.csv('breed_list.csv')
 ```
+
+
+
+
+<a href="./files/breed_list.csv">CSV results</a>
+
+
 
 You should see a link in the output line that says "CSV results." You can click on this link to see the text file in a tab in your browser or to download the file to your computer (exactly how this works will differ depending on your browser and settings, but your options will be the same as if you were trying to open or download a file from any other website.) 
 
@@ -617,7 +628,48 @@ In this query, we put the field/column name in the replace function where the sy
 
 ```python
 %%sql
+SELECT DISTINCT breed,
+REPLACE(breed,'-','') AS breed_fixed
+FROM dogs
+ORDER BY breed_fixed
+LIMIT 5
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>breed</th>
+        <th>breed_fixed</th>
+    </tr>
+    <tr>
+        <td>Affenpinscher</td>
+        <td>Affenpinscher</td>
+    </tr>
+    <tr>
+        <td>Affenpinscher-Afghan Hound Mix</td>
+        <td>AffenpinscherAfghan Hound Mix</td>
+    </tr>
+    <tr>
+        <td>Affenpinscher-Airedale Terrier Mix</td>
+        <td>AffenpinscherAiredale Terrier Mix</td>
+    </tr>
+    <tr>
+        <td>Affenpinscher-Alaskan Malamute Mix</td>
+        <td>AffenpinscherAlaskan Malamute Mix</td>
+    </tr>
+    <tr>
+        <td>Affenpinscher-American English Coonhound Mix</td>
+        <td>AffenpinscherAmerican English Coonhound Mix</td>
+    </tr>
+</table>
+
+
 
 That was helpful, but you'll still notice some issues with the output.
 
@@ -639,7 +691,47 @@ ORDER BY breed_fixed
 
 ```python
 %%sql
+SELECT DISTINCT breed, TRIM(LEADING '-' FROM breed) AS breed_fixed
+FROM dogs
+ORDER BY breed_fixed
+LIMIT 5
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>breed</th>
+        <th>breed_fixed</th>
+    </tr>
+    <tr>
+        <td>Affenpinscher</td>
+        <td>Affenpinscher</td>
+    </tr>
+    <tr>
+        <td>Affenpinscher-Afghan Hound Mix</td>
+        <td>Affenpinscher-Afghan Hound Mix</td>
+    </tr>
+    <tr>
+        <td>Affenpinscher-Airedale Terrier Mix</td>
+        <td>Affenpinscher-Airedale Terrier Mix</td>
+    </tr>
+    <tr>
+        <td>Affenpinscher-Alaskan Malamute Mix</td>
+        <td>Affenpinscher-Alaskan Malamute Mix</td>
+    </tr>
+    <tr>
+        <td>Affenpinscher-American English Coonhound Mix</td>
+        <td>Affenpinscher-American English Coonhound Mix</td>
+    </tr>
+</table>
+
+
 
 That certainly gets us a lot closer to the list we might want, but there are still some entries in the breed_fixed column that are conceptual duplicates of each other, due to poor consistency in how the breed names were entered.  For example, one entry is "Beagle Mix" while another is "Beagle- Mix".  These entries are clearly meant to refer to the same breed, but they will be counted as separate breeds as long as their breed names are different.
 
@@ -653,33 +745,137 @@ Cleaning up all of the entries in the breed column would take quite a bit of wor
 
 ```python
 %%sql
+SELECT DISTINCT subcategory_name
+FROM complete_tests
+ORDER BY subcategory_name
+LIMIT 5
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>subcategory_name</th>
+    </tr>
+    <tr>
+        <td>Communication</td>
+    </tr>
+    <tr>
+        <td>Cunning</td>
+    </tr>
+    <tr>
+        <td>Empathy</td>
+    </tr>
+    <tr>
+        <td>Expression Game</td>
+    </tr>
+    <tr>
+        <td>Impossible Task</td>
+    </tr>
+</table>
+
+
 
 **Question 5: How would you create a text file with a list of all the non-United States countries of Dognition customers with no country listed more than once?**
 
 
 ```python
-%%sql
+non_us_countries=%sql SELECT DISTINCT country FROM users WHERE country!='US'
+non_us_countries.csv('non_us_countries.csv')
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    68 rows affected.
+
+
+
+
+
+<a href="./files/non_us_countries.csv">CSV results</a>
+
+
 
 **Question 6: How would you find the User ID, Dog ID, and test name of the first 10 tests to ever be completed in the Dognition database?**
 
 
 ```python
 %%sql
+SELECT DISTINCT user_guid, dog_guid, test_name 
+FROM complete_tests
+ORDER BY created_at
+LIMIT 5
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>user_guid</th>
+        <th>dog_guid</th>
+        <th>test_name</th>
+    </tr>
+    <tr>
+        <td>None</td>
+        <td>fd27b86c-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Yawn Warm-up</td>
+    </tr>
+    <tr>
+        <td>None</td>
+        <td>fd27b86c-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Yawn Game</td>
+    </tr>
+    <tr>
+        <td>None</td>
+        <td>fd27b86c-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Eye Contact Warm-up</td>
+    </tr>
+    <tr>
+        <td>None</td>
+        <td>fd27b86c-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Eye Contact Game</td>
+    </tr>
+    <tr>
+        <td>None</td>
+        <td>fd27b86c-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Treat Warm-up</td>
+    </tr>
+</table>
+
+
 
 **Question 7: How would create a text file with a list of all the customers with yearly memberships who live in the state of North Carolina (USA) and joined Dognition after March 1, 2014, sorted so that the most recent member is at the top of the list?**
 
 
 ```python
-%%sql
+na_memberships=%sql SELECT user_guid FROM users WHERE membership_type=2 AND country="US" AND state='NC' AND created_at > '2014-03-01' ORDER BY created_at DESC 
+
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    79 rows affected.
+
 
 
 ```python
-%%sql
+na_memberships.csv('na_memberships.csv')
 ```
+
+
+
+
+<a href="./files/na_memberships.csv">CSV results</a>
+
+
 
 **Question 8: See if you can find an SQL function from the list provided at:**
 
@@ -690,7 +886,41 @@ http://www.w3resource.com/mysql/mysql-functions-and-operators.php
 
 ```python
 %%sql
+SELECT DISTINCT UPPER(breed)
+FROM dogs
+ORDER BY breed
+LIMIT 5
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>UPPER(breed)</th>
+    </tr>
+    <tr>
+        <td>-AMERICAN ESKIMO DOG MIX</td>
+    </tr>
+    <tr>
+        <td>-AMERICAN PIT BULL TERRIER MIX</td>
+    </tr>
+    <tr>
+        <td>-ANATOLIAN SHEPHERD DOG MIX</td>
+    </tr>
+    <tr>
+        <td>-AUSTRALIAN CATTLE DOG MIX</td>
+    </tr>
+    <tr>
+        <td>-AUSTRALIAN SHEPHERD MIX</td>
+    </tr>
+</table>
+
+
 
 **Practice any other queries you want to try below!**
 
