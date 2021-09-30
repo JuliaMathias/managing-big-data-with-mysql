@@ -211,6 +211,8 @@ Some things to note:
   entries in the skuinfo table from only one department, you will see that many brands are
   in the same department.
 
+&nbsp;
+
 ```
 SELECT *
 FROM STRINFO
@@ -230,6 +232,8 @@ SAMPLE .05;SELECT *
 FROM DEPTINFO
 SAMPLE .05;
 ```
+
+&nbsp;
 
 ```
 
