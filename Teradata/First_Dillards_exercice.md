@@ -235,13 +235,71 @@ SAMPLE .05;
 
 &nbsp;
 
+## Exercise 3
+
+Examine lists of distinct values in each of the tables. Note which tables have fewer distinct rows that they have total rows
+
+&nbsp;
+
 ```
+SELECT *
+FROM STRINFO;
+SELECT DISTINCT *
+FROM STRINFO;
+SELECT *
+FROM SKSTINFO;
+SELECT DISTINCT *
+FROM SKSTINFO;
+SELECT *
+FROM skuinfo;
+SELECT DISTINCT *
+FROM skuinfo;
+SELECT *
+FROM STORE_MSA;
+SELECT DISTINCT *
+FROM STORE_MSA;
+SELECT *
+FROM TRNSACT;
+SELECT DISTINCT *
+FROM TRNSACT;
+SELECT *
+FROM DEPTINFO;
+SELECT DISTINCT *
+FROM DEPTINFO;
 
 ```
 
-```
+**Tables:** none
+
+&nbsp;
+
+## Exercise 4
+
+Examine instances of transaction table where “amt” is different than “sprice”. What did you learn about how the values in “amt”, “quantity”, and “sprice” relate to one
+another?
+
+&nbsp;
 
 ```
+SELECT quantity, sprice, amt
+WHERE sprice <> amt
+FROM TRNSACT;
+```
+
+The amt is = quantity \* sprice
+
+&nbsp;
+
+## Exercise 5
+
+Even though the Dillard’s dataset had primary keys declared and there were
+not many NULL values, there are still many bizarre entries that likely reflect entry errors.
+To see some examples of these likely errors, examine:
+
+- (a) rows in the trsnact table that have “0” in their orgprice column (how could the original
+  price be 0?),
+- (b) rows in the skstinfo table where both the cost and retail price are listed as 0.00, and
+- (c) rows in the skstinfo table where the cost is greater than the retail price (although occasionally retailers will sell an item at a loss for strategic reasons, it is very unlikely that a manufacturer would provide a suggested retail price that is lower than the cost of the item).
 
 ```
 
