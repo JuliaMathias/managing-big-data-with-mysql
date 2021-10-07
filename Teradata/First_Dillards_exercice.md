@@ -298,12 +298,22 @@ To see some examples of these likely errors, examine:
 
 - (a) rows in the trsnact table that have “0” in their orgprice column (how could the original
   price be 0?),
+
+```
+SELECT *
+WHERE orgprice = 0
+FROM TRNSACT;
+```
+
 - (b) rows in the skstinfo table where both the cost and retail price are listed as 0.00, and
+
+```
+SELECT *
+WHERE cost = 0.00 AND retail = 0.00
+FROM skstinfo;
+```
+
 - (c) rows in the skstinfo table where the cost is greater than the retail price (although occasionally retailers will sell an item at a loss for strategic reasons, it is very unlikely that a manufacturer would provide a suggested retail price that is lower than the cost of the item).
-
-```
-
-```
 
 ```
 
