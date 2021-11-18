@@ -22,8 +22,6 @@ To begin practicing outer joins, load the sql library, connect to the Dognition 
 %sql USE dognitiondb
 ```
 
-    The sql extension is already loaded. To reload it, use:
-      %reload_ext sql
      * mysql://studentuser:***@localhost/dognitiondb
     0 rows affected.
 
@@ -906,21 +904,102 @@ http://www.xaprb.com/blog/2006/05/26/how-to-write-full-outer-join-in-mysql/
 
 ```python
 %%sql
+SELECT COUNT(DISTINCT u.user_guid)
+FROM users u LEFT JOIN dogs d
+ON u.user_guid=d.user_guid
+WHERE d.user_guid IS NULL;
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    1 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>COUNT(DISTINCT u.user_guid)</th>
+    </tr>
+    <tr>
+        <td>2226</td>
+    </tr>
+</table>
+
+
 
 **Question 11: How would you write a query that used a *right* join to return the number of distinct user_guids that were in the users table, but not the dogs table (your query should return a value of 2226)?**
 
 
 ```python
 %%sql
+SELECT COUNT(DISTINCT u.user_guid)
+FROM dogs d RIGHT JOIN users u 
+ON d.user_guid=u.user_guid
+WHERE d.user_guid IS NULL;
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    1 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>COUNT(DISTINCT u.user_guid)</th>
+    </tr>
+    <tr>
+        <td>2226</td>
+    </tr>
+</table>
+
+
 
 **Question 12: Use a left join to create a list of all the unique dog_guids that are contained in the site_activities table, but not the dogs table, and how many times each one is entered.  Note that there are a lot of NULL values in the dog_guid of the site_activities table, so you will want to exclude them from your list.  (Hint: if you exclude null values, the results you get will have two rows with words in their site_activities dog_guid fields instead of real guids, due to mistaken entries)**
 
 
 ```python
 %%sql
+SELECT s.dog_guid, COUNT(DISTINCT s.dog_guid)
+FROM site_activities s LEFT JOIN dogs d
+ON s.dog_guid=d.dog_guid
+WHERE d.user_guid IS NULL AND s.dog_guid IS NOT NULL
+GROUP BY s.dog_guid;
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    4 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>dog_guid</th>
+        <th>COUNT(DISTINCT s.dog_guid)</th>
+    </tr>
+    <tr>
+        <td>fd7c0a66-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>1</td>
+    </tr>
+    <tr>
+        <td>fdbb6b7a-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>1</td>
+    </tr>
+    <tr>
+        <td>Membership</td>
+        <td>1</td>
+    </tr>
+    <tr>
+        <td>PortalContent</td>
+        <td>1</td>
+    </tr>
+</table>
+
+
 
 **Practice any other outer joins you are interested in here!**
 
