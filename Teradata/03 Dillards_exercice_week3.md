@@ -203,47 +203,21 @@ LEFT JOIN trnsact ON store_msa.store = trnsact.store
 
 Query Result:
 
-| Sku     | Store | Count |
-| ------- | ----- | ----- |
-| 4628597 | 504   | 7933  |
-| 5268597 | 2409  | 7607  |
-| 4628597 | 8402  | 6884  |
-| 8120750 | 9103  | 6570  |
-| 4628597 | 2707  | 6534  |
-
 &nbsp;
 
 ## Exercise 3
 
-Examine lists of distinct values in each of the tables. Note which tables have fewer distinct rows that they have total rows
+It turns out **there are many skus in the _trnsact_ table that are not in the _skstinfo_ table**. As a consequence, we will not be able to complete many desirable analyses of Dillard’s profit, as opposed to revenue, because we do not have the cost information for all the skus in the _transact_ table (recall that profit = revenue - cost). Examine some of the rows in the _trnsact_ table that are not in the _skstinfo_ table; can you find any common features that could explain why the cost information is missing?
+
+Please note: The join you will need to complete this analysis will take a long time to run. This query will give you a good feeling for what working with enterprise-sized data feels like. You might want to pin the results once you retrieve them so that you can examine the results later in the session.
 
 &nbsp;
 
 ```
 SELECT *
-FROM STRINFO;
-SELECT DISTINCT *
-FROM STRINFO;
-SELECT *
-FROM SKSTINFO;
-SELECT DISTINCT *
-FROM SKSTINFO;
-SELECT *
-FROM skuinfo;
-SELECT DISTINCT *
-FROM skuinfo;
-SELECT *
-FROM STORE_MSA;
-SELECT DISTINCT *
-FROM STORE_MSA;
-SELECT *
-FROM TRNSACT;
-SELECT DISTINCT *
-FROM TRNSACT;
-SELECT *
-FROM DEPTINFO;
-SELECT DISTINCT *
-FROM DEPTINFO;
+FROM trnsact
+LEFT JOIN skstinfo ON trnsact.sku = skstinfo.sku
+WHERE skstinfo.sku IS NULL
 
 ```
 
@@ -253,8 +227,15 @@ FROM DEPTINFO;
 
 ## Exercise 4
 
-Examine instances of transaction table where “amt” is different than “sprice”. What did you learn about how the values in “amt”, “quantity”, and “sprice” relate to one
-another?
+Although we can’t complete all the analyses we’d like to on Dillard’s profit, we can look at general trends. What is Dillard’s average profit per day?
+
+We can justify examining the average profit per day (excluding transactions that cannot be joined with the skstinfo), but we cannot justify examining the total profit over a given timeframe because there are too many
+transactions for which we do not have cost information.
+
+To calculate profit, subtract the total cost of the items in a transaction from the total revenue brought in during the transaction. Refer to the Dillard’s Department Store Database Metadata and what you’ve seen so far to determine what column—or columns—represents total revenue, and what columns are needed to calculate the total cost associated with a transaction (note that some transactions have multiple items, so you will need to take that into account in your calculations, especially your cost calculations). If you are interested in looking at the total value of goods purchased or returned, use the “amt” field. If you are interested in looking at the total number of goods purchased or returned, use the “quantity” field. Make sure to specify the correct stype in your query. Pay close attention to what we learned in Exercise 1b.
+
+If you are calculating the average profit per day correctly, you will find that the average profit per day from
+register 640 is $10,779.20.
 
 &nbsp;
 
