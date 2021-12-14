@@ -189,7 +189,7 @@ Refer to the links provided in Exercise 1a to practice writing queries that comp
 
 ```
 SELECT strinfo.store
-FROM strinfo INNER JOIN skstinfo ON strinfo.store = skstinfo.store
+FROM strinfo INNER JOIN skstinfo ON strinfo.store = skstinfo.tore
 INNER JOIN store_msa ON skstinfo.store = store_msa.store
 INNER JOIN trnsact ON store_msa.store = trnsact.store;
 
@@ -237,15 +237,25 @@ To calculate profit, subtract the total cost of the items in a transaction from 
 If you are calculating the average profit per day correctly, you will find that the average profit per day from
 register 640 is $10,779.20.
 
+the profit of a single transaction is: amt - (cost \* quantity)
+
+so the average profit of an item would be sum(amt) - sum(cost) \* sum(quantity) / count(days)
+
 &nbsp;
 
 ```
-SELECT quantity, sprice, amt
-WHERE sprice <> amt
-FROM TRNSACT;
+SELECT SUM(t.amt) as total_amount,
+SUM(t.quantity) as total_quantity,
+SUM(si.cost) as total_cost,
+COUNT(DISTINCT t.saledate) as number_of_days,
+SUM(amt-(si.cost*t.quantity))/ COUNT(DISTINCT t.saledate) AS avg_sales
+FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
+WHERE stype='P'
 ```
 
-The amt is = quantity \* sprice
+| total_amount | total_quantity | total_cost   | days | avg_sales  |
+| ------------ | -------------- | ------------ | ---- | ---------- |
+| 1530055284.6 | 63451484       | 935700838.24 | 389  | 1527903.46 |
 
 &nbsp;
 
