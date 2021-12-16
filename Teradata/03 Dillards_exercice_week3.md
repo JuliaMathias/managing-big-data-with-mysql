@@ -363,8 +363,7 @@ tables. Once you are sure that query works, connect the `deptinfo` table. You ma
 when you incorporate aggregate functions into your query. When you do so, make sure all of your column
 names are referenced by the correct table aliases.
 
-If you have written your query correctly, you will find that the department description for sku #5020024 is
-“LESLIE”.
+If you have written your query correctly, you will find that the department description for sku #5020024 is “LESLIE”.
 
 ```SQL
 SELECT skstinfo.sku, skstinfo.store, sku.dept, d.deptdesc
@@ -375,110 +374,63 @@ WHERE sku.sku = 5020024
 
 ## Exercise 9
 
-On what day was the total value (in $) of returned goods the greatest? On what day was the total number of individual returned items the greatest?
+What department (with department description), brand, style, and color had the greatest total value of returned items?
 
-Make sure to specify the correct stype in your query. If you are interested in looking at the total value of goods
-purchased or returned, use the `amt` field. If you are interested in looking at the total number of goods purchased or returned, use the `quantity` field.
+You will need to join 3 tables in this query. Start by writing a query that connects 2 tables. Once you are sure
+that query works, connect the 3rd table. Make sure you include both of these fields in the SELECT and GROUP
+BY clauses. Make sure any non-aggregate column in your SELECT list is also listed in your GROUP BY
+clause.
 
-- (a) total value
+If you have written your query correctly, you will find that the department with the 5th highest total value of
+returned items is #2200 with a department description of “CELEBRT”, a brand of “LANCOME”, a style of
+“1042”, a color of “00-NONE”, and a total value of returned items of $177,142.50.
 
 ```SQL
-SELECT DISTINCT t.saledate, SUM(t.amt) as total_amount
-FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
+SELECT TOP 5 d.dept, d.deptdesc, SUM(t.amt) as total_amount, s.brand, s.style, s.color
+FROM trnsact t INNER JOIN skuinfo s ON t.sku=s.sku
+INNER JOIN deptinfo d ON s.dept=d.dept
 WHERE stype='R'
-GROUP BY t.saledate
+GROUP BY d.dept, d.deptdesc, s.brand, s.style, s.color
 ORDER BY total_amount DESC
 ```
 
-| total_amount | sale_date |
-| ------------ | --------- |
-| 1212071.96   | 04/12/27  |
-| 1040333.67   | 04/12/26  |
-| 980995.01    | 05/07/30  |
-| 956986.41    | 05/08/27  |
-| 942881.31    | 04/12/28  |
-
-- (b) amount of goods returned
-
-```SQL
-SELECT DISTINCT t.saledate, SUM(t.quantity) as total_quantity
-FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
-WHERE stype='R'
-GROUP BY t.saledate
-ORDER BY total_quantity DESC
-```
-
-| total_quantity | sale_date |
-| -------------- | --------- |
-| 36984          | 05/07/30  |
-| 36481          | 05/08/27  |
-| 33723          | 04/12/27  |
-| 31558          | 05/07/29  |
-| 29657          | 05/02/26  |
+| DEPT | DEPTDESC | total_amount | BRAND    | STYLE        | COLOR      |
+| ---- | -------- | ------------ | -------- | ------------ | ---------- |
+| 4505 | POLOMEN  | 216633.59    | POLO FAS | 4GZ 782633   | U KHAKI    |
+| 7307 | SIGRID O | 202424.05    | NOBLE EX | HMANO ENGLIS | ROSE       |
+| 7307 | SIGRID O | 190183.61    | NOBLE EX | CHLOE        | PETAL PINK |
+| 7307 | SIGRID O | 187096.67    | NOBLE EX | 3133         | SAND       |
+| 2200 | CELEBRT  | 177142.50    | LANCOME  | 1042         | 00-NONE    |
 
 ## Exercise 10
 
-On what day was the total value (in $) of returned goods the greatest? On what day was the total number of individual returned items the greatest?
+In what state and zip code is the store that had the greatest total revenue during the time
+period monitored in our dataset?
 
-Make sure to specify the correct stype in your query. If you are interested in looking at the total value of goods
-purchased or returned, use the `amt` field. If you are interested in looking at the total number of goods purchased or returned, use the `quantity` field.
+You will need to join two tables to answer this question, and will need to divide your answers up according to
+the “state” and “zip” fields. Make sure you include both of these fields in the SELECT and GROUP BY
+clauses. Don’t forget to specify that you only want to examine purchase transactions (not returns).
 
-- (a) total value
+If you have written your query correctly, you will find that the store with the 10th highest total revenue is in
+Hurst, TX.
 
 ```SQL
-SELECT DISTINCT t.saledate, SUM(t.amt) as total_amount
-FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
-WHERE stype='R'
-GROUP BY t.saledate
+SELECT TOP 10 SUM(t.amt) as total_amount, t.store, s.state, s.city, s.zip
+FROM trnsact t JOIN store_msa s ON t.store=s.store
+WHERE stype='P'
+GROUP BY t.store, s.state, s.city, s.zip
 ORDER BY total_amount DESC
 ```
 
-| total_amount | sale_date |
-| ------------ | --------- |
-| 1212071.96   | 04/12/27  |
-| 1040333.67   | 04/12/26  |
-| 980995.01    | 05/07/30  |
-| 956986.41    | 05/08/27  |
-| 942881.31    | 04/12/28  |
-
-- (b) amount of goods returned
-
-```SQL
-SELECT DISTINCT t.saledate, SUM(t.quantity) as total_quantity
-FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
-WHERE stype='R'
-GROUP BY t.saledate
-ORDER BY total_quantity DESC
-```
-
-| total_quantity | sale_date |
-| -------------- | --------- |
-| 36984          | 05/07/30  |
-| 36481          | 05/08/27  |
-| 33723          | 04/12/27  |
-| 31558          | 05/07/29  |
-| 29657          | 05/02/26  |
-
-```
-
-```
-
-```
-
-```
-
-```
-
-```
-
-```
-
-```
-
-```
-
-```
-
-```
-
-```
+| total_amount | STORE | STATE | CITY          | ZIP   |
+| ------------ | ----- | ----- | ------------- | ----- |
+| 24171426.58  | 8402  | LA    | METAIRIE      | 70002 |
+| 22792579.65  | 504   | AR    | LITTLE ROCK   | 72205 |
+| 22331884.55  | 2707  | TX    | MCALLEN       | 78501 |
+| 22063797.73  | 1607  | TX    | DALLAS        | 75225 |
+| 20114154.20  | 9103  | KY    | LOUISVILLE    | 40207 |
+| 19040376.84  | 7507  | TX    | HOUSTON       | 77056 |
+| 18642976.76  | 2203  | KS    | OVERLAND PARK | 66214 |
+| 18458644.39  | 9304  | OK    | OKLAHOMA CITY | 73118 |
+| 18455775.63  | 2007  | TX    | SAN ANTONIO   | 78216 |
+| 17740181.20  | 107   | TX    | HURST         | 76053 |
