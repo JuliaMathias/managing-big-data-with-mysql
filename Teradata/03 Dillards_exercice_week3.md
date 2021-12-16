@@ -23,7 +23,7 @@ Note that any queries that join on the trnsact table will likely take a while to
 
 &nbsp;
 
-```
+```SQL
 SELECT COUNT(DISTINCT sku)
 FROM skuinfo;
 ```
@@ -32,7 +32,7 @@ Query Result: 1564178
 
 &nbsp;
 
-```
+```SQL
 SELECT COUNT(DISTINCT sku)
 FROM skstinfo;
 ```
@@ -41,7 +41,7 @@ Query Result: 760212
 
 &nbsp;
 
-```
+```SQL
 SELECT COUNT(DISTINCT sku)
 FROM trnsact;
 ```
@@ -57,7 +57,7 @@ Query Result: 714499
 
 &nbsp;
 
-```
+```SQL
 SELECT COUNT(DISTINCT u.sku)
 FROM skuinfo u, skstinfo s
 WHERE u.sku=s.sku;
@@ -67,7 +67,7 @@ Query Result: 760212
 
 &nbsp;
 
-```
+```SQL
 SELECT COUNT(DISTINCT u.sku)
 FROM skuinfo u, trnsact t
 WHERE u.sku=t.sku;
@@ -77,7 +77,7 @@ Query Result: 714499
 
 &nbsp;
 
-```
+```SQL
 SELECT COUNT(DISTINCT s.sku)
 FROM skstinfo s, trnsact t
 WHERE s.sku=t.sku;
@@ -100,7 +100,7 @@ You should see there are multiple instances of every sku/store combination in th
 tables, but you would need to join them on both of the following conditions: **_trnsact.sku= skstinfo.sku AND
 trnsact.store= skstinfo.store_**.
 
-```
+```SQL
 SELECT sku, store, COUNT(*)
 FROM skstinfo
 GROUP BY sku, store
@@ -111,7 +111,7 @@ Query Result: The count is always 1
 
 &nbsp;
 
-```
+```SQL
 SELECT COUNT(DISTINCT u.sku)
 FROM skuinfo u, trnsact t
 WHERE u.sku=t.sku;
@@ -145,7 +145,7 @@ the quiz.
 
 &nbsp;
 
-```
+```SQL
 SELECT COUNT(DISTINCT store)
 FROM strinfo
 ```
@@ -154,7 +154,7 @@ Query Result: 453
 
 &nbsp;
 
-```
+```SQL
 SELECT COUNT(DISTINCT store)
 FROM skstinfo
 ```
@@ -163,7 +163,7 @@ Query Result: 357
 
 &nbsp;
 
-```
+```SQL
 SELECT COUNT(DISTINCT store)
 FROM store_msa
 ```
@@ -172,7 +172,7 @@ Query Result: 333
 
 &nbsp;
 
-```
+```SQL
 SELECT COUNT(DISTINCT store)
 FROM trnsact
 ```
@@ -187,7 +187,7 @@ Which stores are common to all four tables, or unique to specific tables?
 
 Refer to the links provided in Exercise 1a to practice writing queries that compare all 4 tables at once
 
-```
+```SQL
 SELECT strinfo.store
 FROM strinfo INNER JOIN skstinfo ON strinfo.store = skstinfo.tore
 INNER JOIN store_msa ON skstinfo.store = store_msa.store
@@ -213,7 +213,7 @@ Please note: The join you will need to complete this analysis will take a long t
 
 &nbsp;
 
-```
+```SQL
 SELECT *
 FROM trnsact
 LEFT JOIN skstinfo ON trnsact.sku = skstinfo.sku
@@ -243,7 +243,7 @@ so the average profit of an item would be sum(amt) - sum(cost) \* sum(quantity) 
 
 &nbsp;
 
-```
+```SQL
 SELECT SUM(t.amt) as total_amount,
 SUM(t.quantity) as total_quantity,
 SUM(si.cost) as total_cost,
@@ -261,28 +261,124 @@ WHERE stype='P'
 
 ## Exercise 5
 
-Even though the Dillard’s dataset had primary keys declared and there were
-not many NULL values, there are still many bizarre entries that likely reflect entry errors.
-To see some examples of these likely errors, examine:
+On what day was the total value (in $) of returned goods the greatest? On what day was the total number of individual returned items the greatest?
 
-- (a) rows in the trsnact table that have “0” in their orgprice column (how could the original
-  price be 0?),
+Make sure to specify the correct stype in your query. If you are interested in looking at the total value of goods
+purchased or returned, use the `amt` field. If you are interested in looking at the total number of goods purchased or returned, use the `quantity` field.
 
-```
-SELECT *
-WHERE orgprice = 0
-FROM TRNSACT;
-```
+- (a) total value
 
-- (b) rows in the skstinfo table where both the cost and retail price are listed as 0.00, and
-
-```
-SELECT *
-WHERE cost = 0.00 AND retail = 0.00
-FROM skstinfo;
+```SQL
+SELECT DISTINCT t.saledate, SUM(t.amt) as total_amount
+FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
+WHERE stype='R'
+GROUP BY t.saledate
+ORDER BY total_amount DESC
 ```
 
-- (c) rows in the skstinfo table where the cost is greater than the retail price (although occasionally retailers will sell an item at a loss for strategic reasons, it is very unlikely that a manufacturer would provide a suggested retail price that is lower than the cost of the item).
+| total_amount | sale_date |
+| ------------ | --------- |
+| 1212071.96   | 04/12/27  |
+| 1040333.67   | 04/12/26  |
+| 980995.01    | 05/07/30  |
+| 956986.41    | 05/08/27  |
+| 942881.31    | 04/12/28  |
+
+- (b) amount of goods returned
+
+```SQL
+SELECT DISTINCT t.saledate, SUM(t.quantity) as total_quantity
+FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
+WHERE stype='R'
+GROUP BY t.saledate
+ORDER BY total_quantity DESC
+```
+
+| total_quantity | sale_date |
+| -------------- | --------- |
+| 36984          | 05/07/30  |
+| 36481          | 05/08/27  |
+| 33723          | 04/12/27  |
+| 31558          | 05/07/29  |
+| 29657          | 05/02/26  |
+
+## Exercise 6
+
+What is the maximum price paid for an item in our database? What is the minimum price paid for an item in our database?
+
+Make sure to use the correct column to address these questions (use the same column(s) as you used to calculate revenue). The answer to the minimum price question is likely evidence of more incorrect entries.
+
+- (a) maximum price
+
+```SQL
+SELECT TOP 5 *
+FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
+WHERE stype='P'
+ORDER BY t.amt DESC
+
+```
+
+| SKU     | STORE | REGISTER | SALEDATE   | STYPE | QUANTITY | ORGPRICE | SPRICE  | AMT     | STORE | COST    | RETAIL  |
+| ------- | ----- | -------- | ---------- | ----- | -------- | -------- | ------- | ------- | ----- | ------- | ------- |
+| 6200173 | 1607  | 650      | 2005-03-29 | P     | 1        | 6017.00  | 6017.00 | 6017.00 | 1607  | 2700.00 | 6017.00 |
+| 3733090 | 1007  | 550      | 2004-12-31 | P     | 1        | 6.00     | 5005.00 | 5005.00 | 1007  | 2.16    | 6.00    |
+| 9747774 | 5002  | 400      | 2005-07-01 | P     | 1        | 5.00     | 4004.00 | 4004.00 | 5002  | 1.68    | 5.00    |
+| 2139390 | 1607  | 280      | 2005-05-04 | P     | 1        | 1895.00  | 1895.00 | 1895.00 | 1607  | 895.00  | 1895.00 |
+| 4930553 | 209   | 231      | 2005-08-20 | P     | 1        | 1600.00  | 1600.00 | 1600.00 | 209   | 960.00  | 1600.00 |
+
+- (b) minimum price
+
+```SQL
+SELECT TOP 5 *
+FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
+WHERE stype='P' AND t.amt <> 0.00
+ORDER BY t.amt
+```
+
+0.01
+
+## Exercise 5
+
+On what day was the total value (in $) of returned goods the greatest? On what day was the total number of individual returned items the greatest?
+
+Make sure to specify the correct stype in your query. If you are interested in looking at the total value of goods
+purchased or returned, use the `amt` field. If you are interested in looking at the total number of goods purchased or returned, use the `quantity` field.
+
+- (a) total value
+
+```SQL
+SELECT DISTINCT t.saledate, SUM(t.amt) as total_amount
+FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
+WHERE stype='R'
+GROUP BY t.saledate
+ORDER BY total_amount DESC
+```
+
+| total_amount | sale_date |
+| ------------ | --------- |
+| 1212071.96   | 04/12/27  |
+| 1040333.67   | 04/12/26  |
+| 980995.01    | 05/07/30  |
+| 956986.41    | 05/08/27  |
+| 942881.31    | 04/12/28  |
+
+- (b) amount of goods returned
+
+```SQL
+SELECT DISTINCT t.saledate, SUM(t.quantity) as total_quantity
+FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
+WHERE stype='R'
+GROUP BY t.saledate
+ORDER BY total_quantity DESC
+```
+
+| total_quantity | sale_date |
+| -------------- | --------- |
+| 36984          | 05/07/30  |
+| 36481          | 05/08/27  |
+| 33723          | 04/12/27  |
+| 31558          | 05/07/29  |
+| 29657          | 05/02/26  |
 
 ```
 
