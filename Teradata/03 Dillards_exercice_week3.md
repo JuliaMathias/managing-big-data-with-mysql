@@ -337,7 +337,114 @@ ORDER BY t.amt
 
 0.01
 
-## Exercise 5
+## Exercise 7
+
+How many departments have more than 100 brands associated with them, and what are their descriptions?
+
+A **HAVING** clause will be helpful for addressing this question. You will also need a join to combine the
+skuinfo and deptinfo tables in order to retrieve the descriptions of the departments.
+
+```SQL
+SELECT d.dept, d.deptdesc, COUNT(s.brand) as brands
+FROM deptinfo d JOIN skuinfo s ON d.dept=s.dept
+HAVING COUNT(s.brand) > 100
+GROUP BY d.dept, d.deptdesc
+ORDER BY COUNT(s.brand) DESC
+```
+
+60 depts
+
+## Exercise 8
+
+Write a query that retrieves the department descriptions of each of the skus in the skstinfo
+table.
+You will need to join 3 tables in this query. Start by writing a query that connects the skstinfo and skuinfo
+tables. Once you are sure that query works, connect the deptinfo table. You may want to explore what happens
+when you incorporate aggregate functions into your query. When you do so, make sure all of your column
+names are referenced by the correct table aliases.
+If you have written your query correctly, you will find that the department description for sku #5020024 is
+“LESLIE”.
+
+- (a) total value
+
+```SQL
+SELECT DISTINCT t.saledate, SUM(t.amt) as total_amount
+FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
+WHERE stype='R'
+GROUP BY t.saledate
+ORDER BY total_amount DESC
+```
+
+| total_amount | sale_date |
+| ------------ | --------- |
+| 1212071.96   | 04/12/27  |
+| 1040333.67   | 04/12/26  |
+| 980995.01    | 05/07/30  |
+| 956986.41    | 05/08/27  |
+| 942881.31    | 04/12/28  |
+
+- (b) amount of goods returned
+
+```SQL
+SELECT DISTINCT t.saledate, SUM(t.quantity) as total_quantity
+FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
+WHERE stype='R'
+GROUP BY t.saledate
+ORDER BY total_quantity DESC
+```
+
+| total_quantity | sale_date |
+| -------------- | --------- |
+| 36984          | 05/07/30  |
+| 36481          | 05/08/27  |
+| 33723          | 04/12/27  |
+| 31558          | 05/07/29  |
+| 29657          | 05/02/26  |
+
+## Exercise 9
+
+On what day was the total value (in $) of returned goods the greatest? On what day was the total number of individual returned items the greatest?
+
+Make sure to specify the correct stype in your query. If you are interested in looking at the total value of goods
+purchased or returned, use the `amt` field. If you are interested in looking at the total number of goods purchased or returned, use the `quantity` field.
+
+- (a) total value
+
+```SQL
+SELECT DISTINCT t.saledate, SUM(t.amt) as total_amount
+FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
+WHERE stype='R'
+GROUP BY t.saledate
+ORDER BY total_amount DESC
+```
+
+| total_amount | sale_date |
+| ------------ | --------- |
+| 1212071.96   | 04/12/27  |
+| 1040333.67   | 04/12/26  |
+| 980995.01    | 05/07/30  |
+| 956986.41    | 05/08/27  |
+| 942881.31    | 04/12/28  |
+
+- (b) amount of goods returned
+
+```SQL
+SELECT DISTINCT t.saledate, SUM(t.quantity) as total_quantity
+FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
+WHERE stype='R'
+GROUP BY t.saledate
+ORDER BY total_quantity DESC
+```
+
+| total_quantity | sale_date |
+| -------------- | --------- |
+| 36984          | 05/07/30  |
+| 36481          | 05/08/27  |
+| 33723          | 04/12/27  |
+| 31558          | 05/07/29  |
+| 29657          | 05/02/26  |
+
+## Exercise 10
 
 On what day was the total value (in $) of returned goods the greatest? On what day was the total number of individual returned items the greatest?
 
