@@ -356,50 +356,22 @@ ORDER BY COUNT(s.brand) DESC
 
 ## Exercise 8
 
-Write a query that retrieves the department descriptions of each of the skus in the skstinfo
-table.
-You will need to join 3 tables in this query. Start by writing a query that connects the skstinfo and skuinfo
-tables. Once you are sure that query works, connect the deptinfo table. You may want to explore what happens
+Write a query that retrieves the department descriptions of each of the skus in the `skstinfo` table.
+
+You will need to join 3 tables in this query. Start by writing a query that connects the `skstinfo` and `skuinfo`
+tables. Once you are sure that query works, connect the `deptinfo` table. You may want to explore what happens
 when you incorporate aggregate functions into your query. When you do so, make sure all of your column
 names are referenced by the correct table aliases.
+
 If you have written your query correctly, you will find that the department description for sku #5020024 is
 “LESLIE”.
 
-- (a) total value
-
 ```SQL
-SELECT DISTINCT t.saledate, SUM(t.amt) as total_amount
-FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
-WHERE stype='R'
-GROUP BY t.saledate
-ORDER BY total_amount DESC
+SELECT skstinfo.sku, skstinfo.store, sku.dept, d.deptdesc
+FROM skstinfo INNER JOIN skuinfo sku ON skstinfo.sku=sku.sku
+INNER JOIN deptinfo d ON sku.dept=d.dept
+WHERE sku.sku = 5020024
 ```
-
-| total_amount | sale_date |
-| ------------ | --------- |
-| 1212071.96   | 04/12/27  |
-| 1040333.67   | 04/12/26  |
-| 980995.01    | 05/07/30  |
-| 956986.41    | 05/08/27  |
-| 942881.31    | 04/12/28  |
-
-- (b) amount of goods returned
-
-```SQL
-SELECT DISTINCT t.saledate, SUM(t.quantity) as total_quantity
-FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
-WHERE stype='R'
-GROUP BY t.saledate
-ORDER BY total_quantity DESC
-```
-
-| total_quantity | sale_date |
-| -------------- | --------- |
-| 36984          | 05/07/30  |
-| 36481          | 05/08/27  |
-| 33723          | 04/12/27  |
-| 31558          | 05/07/29  |
-| 29657          | 05/02/26  |
 
 ## Exercise 9
 
