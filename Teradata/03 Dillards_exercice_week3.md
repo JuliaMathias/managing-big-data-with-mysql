@@ -11,8 +11,8 @@ tables?
 The significance of your answers will become clear in Exercise 3.
 
 You will only be tested on queries that compare 2 skus in 2 of the tables listed above at a time. However, if you want to try writing queries that compare all 3 tables at once, you might find the following references helpful:
-http://www.w3resource.com/sql/joins/perform-a-left-join.php
-http://www.wellho.net/solutions/mysql-left-joins-to-link-three-or-more-tables.html
+<http://www.w3resource.com/sql/joins/perform-a-left-join.php>
+<http://www.wellho.net/solutions/mysql-left-joins-to-link-three-or-more-tables.html>
 
 After interpreting the set of queries you decide to implement, you should conclude that only one of the three tables has distinct skus that are not contained in either of the other tables. However, none of the three tables contain the exact same number of distinct skus.
 
@@ -134,7 +134,7 @@ Query Result:
 ### A
 
 Use **COUNT** and **DISTINCT** to determine how many distinct stores there are in the
-_strinfo_, _store_msa_, _skstinfo_, and _trnsact_ tables.
+_strinfo_, _store_msa_,_skstinfo_, and*trnsact* tables.
 
 You should see that:
 
