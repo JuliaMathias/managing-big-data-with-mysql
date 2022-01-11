@@ -33,6 +33,8 @@ Let's look at some examples.
 %sql USE dognitiondb
 ```
 
+    The sql extension is already loaded. To reload it, use:
+      %reload_ext sql
      * mysql://studentuser:***@localhost/dognitiondb
     0 rows affected.
 
@@ -526,7 +528,11 @@ LIMIT 5;
 
 ```python
 %%sql
-
+SELECT DISTINCT d.dog_guid, d.breed_group, u.state, u.zip
+FROM dogs d
+JOIN users u ON d.user_guid=u.user_guid
+WHERE breed_group IN ('Working','Sporting','Herding') AND 
+LIMIT 5;
 ```
 
 **Question 8: Earlier we examined unique users in the users table who were NOT in the dogs table.  Use a NOT EXISTS clause to examine all the users in the dogs table that are not in the users table (you should get 2 rows in your output).**
@@ -534,8 +540,36 @@ LIMIT 5;
 
 ```python
 %%sql
-
+SELECT d.user_guid, d.dog_guid
+FROM dogs d 
+WHERE NOT EXISTS (SELECT DISTINCT u.user_guid
+              FROM users u
+              WHERE d.user_guid=u.user_guid);
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    2 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>user_guid</th>
+        <th>dog_guid</th>
+    </tr>
+    <tr>
+        <td>None</td>
+        <td>fd7c0a66-7144-11e5-ba71-058fbc01cf0b</td>
+    </tr>
+    <tr>
+        <td>None</td>
+        <td>fdbb6b7a-7144-11e5-ba71-058fbc01cf0b</td>
+    </tr>
+</table>
+
+
 
 **Question 9: We saw earlier that user_guid 'ce7b75bc-7144-11e5-ba71-058fbc01cf0b' still ends up with 1819 rows of output after a left outer join with the dogs table.  If you investigate why, you'll find out that's because there are duplicate user_guids in the dogs table as well.  How would you adapt the query we wrote earlier (copied below) to only join unique UserIDs from the users table with unique UserIDs from the dog table?**  
 
@@ -555,24 +589,116 @@ ORDER BY numrows DESC;
 
 ```python
 %%sql
+SELECT DistinctUUsersID.user_guid AS uUserID, d.user_guid AS dUserID, count(*) AS numrows
+FROM (SELECT DISTINCT u.user_guid 
+      FROM users u) AS DistinctUUsersID 
+LEFT JOIN dogs d
+  ON DistinctUUsersID.user_guid=d.user_guid
+WHERE DistinctUUsersID.user_guid='ce7b75bc-7144-11e5-ba71-058fbc01cf0b'
+GROUP BY DistinctUUsersID.user_guid
+ORDER BY numrows DESC;
 
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    1 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>uUserID</th>
+        <th>dUserID</th>
+        <th>numrows</th>
+    </tr>
+    <tr>
+        <td>ce7b75bc-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>ce7b75bc-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>1819</td>
+    </tr>
+</table>
+
+
 
 **Question 10: Now let's prepare and test the inner query for the right half of the join. Give the dogs table an alias, and write a query that would select the distinct user_guids from the dogs table (we will use this query as a inner subquery in subsequent questions, so you will need an alias to differentiate the user_guid column of the dogs table from the user_guid column of the users table).**  
 
 
 ```python
 %%sql
+SELECT DISTINCT d.user_guid FROM dogs d LIMIT 5
 
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>user_guid</th>
+    </tr>
+    <tr>
+        <td>None</td>
+    </tr>
+    <tr>
+        <td>ce134492-7144-11e5-ba71-058fbc01cf0b</td>
+    </tr>
+    <tr>
+        <td>ce134a78-7144-11e5-ba71-058fbc01cf0b</td>
+    </tr>
+    <tr>
+        <td>ce134be0-7144-11e5-ba71-058fbc01cf0b</td>
+    </tr>
+    <tr>
+        <td>ce134d16-7144-11e5-ba71-058fbc01cf0b</td>
+    </tr>
+</table>
+
+
 
 **Question 11: Now insert the query you wrote in Question 10 as a subquery on the right part of the join you wrote in question 9.  The output should return columns that should have matching user_guids, and 1 row in the numrows column with a value of 1.  If you are getting errors, make sure you have given an alias to the derived table you made to extract the distinct user_guids from the dogs table, and double-check that your aliases are referenced correctly in the SELECT and ON statements.**
 
 
 ```python
 %%sql
+SELECT DistinctUUsersID.user_guid AS uUserID, DistinctDUsersID.user_guid AS dUserID, count(*) AS numrows
+FROM (SELECT DISTINCT u.user_guid 
+      FROM users u) AS DistinctUUsersID 
+LEFT JOIN (SELECT DISTINCT d.user_guid 
+      FROM dogs d) AS DistinctDUsersID 
+  ON DistinctUUsersID.user_guid=DistinctDUsersID.user_guid
+WHERE DistinctUUsersID.user_guid='ce7b75bc-7144-11e5-ba71-058fbc01cf0b'
+GROUP BY DistinctUUsersID.user_guid
+ORDER BY numrows DESC;
 
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    1 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>uUserID</th>
+        <th>dUserID</th>
+        <th>numrows</th>
+    </tr>
+    <tr>
+        <td>ce7b75bc-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>ce7b75bc-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>1</td>
+    </tr>
+</table>
+
+
 
 **Question 12: Adapt the query from Question 10 so that, in theory, you would retrieve a full list of all the DogIDs a user in the users table owns, with its accompagnying breed information whenever possible.  HOWEVER, BEFORE YOU RUN THE QUERY MAKE SURE TO LIMIT YOUR OUTPUT TO 100 ROWS *WITHIN* THE SUBQUERY TO THE LEFT OF YOUR JOIN.**  If you run the query without imposing limits it will take a *very* long time.  If you try to limit the output by just putting a limit clause at the end of the outermost query, the database will still have to hold the entire derived tables in memory and join each row of the derived tables before limiting the output.  If you put the limit clause in the subquery to the left of the join, the database will only have to join 100 rows of data.
 
@@ -580,8 +706,58 @@ ORDER BY numrows DESC;
 
 ```python
 %%sql
-
+SELECT DistinctUUsersID.user_guid AS uUserID, DistinctDUsersID.dog_guid AS dDogID, DistinctDUsersID.breed AS breed 
+FROM (SELECT DISTINCT u.user_guid 
+      FROM users u
+      LIMIT 100) AS DistinctUUsersID 
+LEFT JOIN (SELECT DISTINCT d.user_guid, d.dog_guid, d.breed 
+      FROM dogs d) AS DistinctDUsersID 
+  ON DistinctUUsersID.user_guid=DistinctDUsersID.user_guid
+GROUP BY DistinctUUsersID.user_guid
+LIMIT 5;
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>uUserID</th>
+        <th>dDogID</th>
+        <th>breed</th>
+    </tr>
+    <tr>
+        <td>ce134a78-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>fd3d1b44-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Shih Tzu</td>
+    </tr>
+    <tr>
+        <td>ce134be0-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>fd27c956-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>German Shepherd Dog-Nova Scotia Duck Tolling Retriever Mix</td>
+    </tr>
+    <tr>
+        <td>ce134e42-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>fd27b272-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Labrador Retriever</td>
+    </tr>
+    <tr>
+        <td>ce13507c-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>fd27b79a-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Golden Retriever</td>
+    </tr>
+    <tr>
+        <td>ce135194-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>fd27e026-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Dalmatian</td>
+    </tr>
+</table>
+
+
 
 **Question 13: You might have a good guess by now about why there are duplicate rows in the dogs table and users table, even though most corporate databases are configured to prevent duplicate rows from ever being accepted.  To be sure, though, let's adapt this query we wrote above:**
 
@@ -599,8 +775,62 @@ ORDER BY numrows DESC
 
 ```python
 %%sql
-
+SELECT DistictUUsersID.user_guid AS userid, d.breed, d.weight, count(*) AS numrows
+FROM (SELECT DISTINCT u.user_guid
+      FROM users u) AS DistictUUsersID
+LEFT JOIN dogs d ON DistictUUsersID.user_guid=d.user_guid
+GROUP BY DistictUUsersID.user_guid
+HAVING numrows>10
+ORDER BY numrows DESC;
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>userid</th>
+        <th>breed</th>
+        <th>weight</th>
+        <th>numrows</th>
+    </tr>
+    <tr>
+        <td>ce7b75bc-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Shih Tzu</td>
+        <td>190</td>
+        <td>1819</td>
+    </tr>
+    <tr>
+        <td>ce225842-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Shih Tzu</td>
+        <td>190</td>
+        <td>26</td>
+    </tr>
+    <tr>
+        <td>ce2258a6-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Shih Tzu</td>
+        <td>190</td>
+        <td>20</td>
+    </tr>
+    <tr>
+        <td>ce135e14-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Shih Tzu</td>
+        <td>190</td>
+        <td>13</td>
+    </tr>
+    <tr>
+        <td>ce29675e-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Labrador Retriever- Mix</td>
+        <td>60</td>
+        <td>11</td>
+    </tr>
+</table>
+
+
 
 You can see that almost all of the UserIDs that are causing problems are Shih Tzus that weigh 190 pounds.  As we learned in earlier lessons, Dognition used this combination of breed and weight to code for testing accounts.  These UserIDs do not represent real data.  These types of testing entries would likely be cleaned out of databases used in large established companies, but could certainly still be present in either new databases that are still being prepared and configured, or in small companies which have not had time or resources to perfect their data storage.  
 
