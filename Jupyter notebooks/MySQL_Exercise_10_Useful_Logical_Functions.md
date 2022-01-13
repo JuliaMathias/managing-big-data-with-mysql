@@ -210,7 +210,42 @@ GROUP BY US_user
 
 ```python
 %%sql
+SELECT IF(cleaned_users.country='US','In US', 
+          IF(cleaned_users.country='N/A','Not Applicable','Outside US')) AS US_user, 
+      count(cleaned_users.user_guid)   
+FROM (SELECT DISTINCT user_guid, country 
+      FROM users
+      WHERE country IS NOT NULL) AS cleaned_users
+GROUP BY US_user
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    3 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>US_user</th>
+        <th>count(cleaned_users.user_guid)</th>
+    </tr>
+    <tr>
+        <td>In US</td>
+        <td>9356</td>
+    </tr>
+    <tr>
+        <td>Not Applicable</td>
+        <td>5642</td>
+    </tr>
+    <tr>
+        <td>Outside US</td>
+        <td>1263</td>
+    </tr>
+</table>
+
+
 
 <mark>The IF function is not supported by all database platforms, and some spell the function as IIF rather than IF, so be sure to double-check how the function works in the platform you are using.</mark>
 
@@ -242,7 +277,42 @@ GROUP BY US_user
 
 ```python
 %%sql
+SELECT IF(cleaned_users.country='US','In US', 
+          IF(cleaned_users.country='N/A','Not Applicable','Outside US')) AS US_user, 
+      count(cleaned_users.user_guid)   
+FROM (SELECT DISTINCT user_guid, country 
+      FROM users
+      WHERE country IS NOT NULL) AS cleaned_users
+GROUP BY US_user
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    3 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>US_user</th>
+        <th>count(cleaned_users.user_guid)</th>
+    </tr>
+    <tr>
+        <td>In US</td>
+        <td>9356</td>
+    </tr>
+    <tr>
+        <td>Not Applicable</td>
+        <td>5642</td>
+    </tr>
+    <tr>
+        <td>Outside US</td>
+        <td>1263</td>
+    </tr>
+</table>
+
+
 
 Since our query does not require manipulation of any of the values in the country column, though, we could also take advantage of this syntax, which is slightly more compact:
 
@@ -269,7 +339,45 @@ GROUP BY US_user
 
 ```python
 %%sql
+SELECT CASE cleaned_users.country
+            WHEN "US" THEN "In US"
+            WHEN "N/A" THEN "Not Applicable"
+            ELSE "Outside US"
+            END AS US_user, 
+      count(cleaned_users.user_guid)   
+FROM (SELECT DISTINCT user_guid, country 
+      FROM users
+      WHERE country IS NOT NULL) AS cleaned_users
+GROUP BY US_user
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    3 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>US_user</th>
+        <th>count(cleaned_users.user_guid)</th>
+    </tr>
+    <tr>
+        <td>In US</td>
+        <td>9356</td>
+    </tr>
+    <tr>
+        <td>Not Applicable</td>
+        <td>5642</td>
+    </tr>
+    <tr>
+        <td>Outside US</td>
+        <td>1263</td>
+    </tr>
+</table>
+
+
 
 There are a couple of things to know about CASE expressions:
    
@@ -287,7 +395,56 @@ You will find that CASE statements are useful in many contexts. For example, the
 
 ```python
 %%sql
+SELECT dog_guid, dog_fixed,
+    CASE dog_fixed
+        WHEN "1" THEN "neutered"
+        WHEN "0" THEN "not neutered"
+    END AS neutered
+FROM dogs
+LIMIT 5
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>neutered_or_not</th>
+        <th>dog_fixed</th>
+        <th>dog_guid</th>
+    </tr>
+    <tr>
+        <td>neutered</td>
+        <td>1</td>
+        <td>fd27b272-7144-11e5-ba71-058fbc01cf0b</td>
+    </tr>
+    <tr>
+        <td>neutered</td>
+        <td>1</td>
+        <td>fd27b5ba-7144-11e5-ba71-058fbc01cf0b</td>
+    </tr>
+    <tr>
+        <td>not_neutered</td>
+        <td>0</td>
+        <td>fd27b6b4-7144-11e5-ba71-058fbc01cf0b</td>
+    </tr>
+    <tr>
+        <td>not_neutered</td>
+        <td>0</td>
+        <td>fd27b79a-7144-11e5-ba71-058fbc01cf0b</td>
+    </tr>
+    <tr>
+        <td>not_neutered</td>
+        <td>0</td>
+        <td>fd27b86c-7144-11e5-ba71-058fbc01cf0b</td>
+    </tr>
+</table>
+
+
 
 You can also use CASE statements to standardize or combine several values into one.  
 
@@ -298,14 +455,108 @@ You can also use CASE statements to standardize or combine several values into o
 
 ```python
 %%sql
+SELECT dog_guid, exclude,
+    CASE exclude
+        WHEN "1" THEN "exclude"
+        ELSE "keep"
+    END AS exclude_or_keep
+FROM dogs
+LIMIT 5
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>dog_guid</th>
+        <th>exclude</th>
+        <th>exclude_or_keep</th>
+    </tr>
+    <tr>
+        <td>fd27b272-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>None</td>
+        <td>keep</td>
+    </tr>
+    <tr>
+        <td>fd27b5ba-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>None</td>
+        <td>keep</td>
+    </tr>
+    <tr>
+        <td>fd27b6b4-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>None</td>
+        <td>keep</td>
+    </tr>
+    <tr>
+        <td>fd27b79a-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>None</td>
+        <td>keep</td>
+    </tr>
+    <tr>
+        <td>fd27b86c-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>1</td>
+        <td>exclude</td>
+    </tr>
+</table>
+
+
 
 **Question 5: Re-write your query from Question 4 using an IF statement instead of a CASE statement.**
 
 
 ```python
 %%sql
+SELECT dog_guid, exclude, IF(exclude='1','exclude','keep') AS exclude_or_keep 
+FROM dogs
+LIMIT 5
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>dog_guid</th>
+        <th>exclude</th>
+        <th>exclude_or_keep</th>
+    </tr>
+    <tr>
+        <td>fd27b272-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>None</td>
+        <td>keep</td>
+    </tr>
+    <tr>
+        <td>fd27b5ba-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>None</td>
+        <td>keep</td>
+    </tr>
+    <tr>
+        <td>fd27b6b4-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>None</td>
+        <td>keep</td>
+    </tr>
+    <tr>
+        <td>fd27b79a-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>None</td>
+        <td>keep</td>
+    </tr>
+    <tr>
+        <td>fd27b86c-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>1</td>
+        <td>exclude</td>
+    </tr>
+</table>
+
+
 
 Case expressions are also useful for breaking values in a column up into multiple groups that meet specific criteria or that have specific ranges of values.
 
@@ -325,9 +576,58 @@ Limit your results for troubleshooting purposes.**
 
 ```python
 %%sql
+SELECT dog_guid, weight,
+    CASE 
+        WHEN weight BETWEEN 1 AND 10 THEN "very small"
+        WHEN weight BETWEEN 11 AND 30 THEN "small"
+        WHEN weight BETWEEN 31 AND 50 THEN "medium"
+        WHEN weight BETWEEN 51 AND 85 THEN "large"
+        WHEN weight > 85 THEN "very large"
+    END AS dog_size
+FROM dogs
+LIMIT 5
 ```
 
-    UsageError: %%sql is a cell magic, but the cell body is empty. Did you mean the line magic %sql (single %)?
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>dog_guid</th>
+        <th>weight</th>
+        <th>dog_size</th>
+    </tr>
+    <tr>
+        <td>fd27b272-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>50</td>
+        <td>medium</td>
+    </tr>
+    <tr>
+        <td>fd27b5ba-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>20</td>
+        <td>small</td>
+    </tr>
+    <tr>
+        <td>fd27b6b4-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>70</td>
+        <td>large</td>
+    </tr>
+    <tr>
+        <td>fd27b79a-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>70</td>
+        <td>large</td>
+    </tr>
+    <tr>
+        <td>fd27b86c-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>190</td>
+        <td>very large</td>
+    </tr>
+</table>
+
 
 
 ## 3. Pay attention to the order of operations within logical expressions
@@ -370,7 +670,37 @@ GROUP BY groups
 
 ```python
 %%sql
+SELECT COUNT(DISTINCT dog_guid), 
+CASE WHEN breed_group='Sporting' OR breed_group='Herding' AND exclude!='1' THEN "group 1"
+     ELSE "everything else"
+     END AS groups
+FROM dogs
+GROUP BY groups
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    2 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>COUNT(DISTINCT dog_guid)</th>
+        <th>groups</th>
+    </tr>
+    <tr>
+        <td>30179</td>
+        <td>everything else</td>
+    </tr>
+    <tr>
+        <td>4871</td>
+        <td>group 1</td>
+    </tr>
+</table>
+
+
 
 **Question 8: How many distinct dog_guids are found in group 1 using this query?**
     
@@ -387,7 +717,37 @@ GROUP BY group_name
 
 ```python
 %%sql
+SELECT COUNT(DISTINCT dog_guid), 
+CASE WHEN exclude!='1' AND breed_group='Sporting' OR breed_group='Herding' THEN "group 1"
+     ELSE "everything else"
+     END AS group_name
+FROM dogs
+GROUP BY group_name
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    2 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>COUNT(DISTINCT dog_guid)</th>
+        <th>group_name</th>
+    </tr>
+    <tr>
+        <td>31589</td>
+        <td>everything else</td>
+    </tr>
+    <tr>
+        <td>3461</td>
+        <td>group 1</td>
+    </tr>
+</table>
+
+
 
 **Question 9: How many distinct dog_guids are found in group 1 using this query?**
 
@@ -403,7 +763,37 @@ GROUP BY group_name
 
 ```python
 %%sql
+SELECT COUNT(DISTINCT dog_guid), 
+CASE WHEN exclude!='1' AND (breed_group='Sporting' OR breed_group='Herding') THEN "group 1"
+     ELSE "everything else"
+     END AS group_name
+FROM dogs
+GROUP BY group_name
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    2 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>COUNT(DISTINCT dog_guid)</th>
+        <th>group_name</th>
+    </tr>
+    <tr>
+        <td>35004</td>
+        <td>everything else</td>
+    </tr>
+    <tr>
+        <td>46</td>
+        <td>group 1</td>
+    </tr>
+</table>
+
+
 
 <mark> **So make sure you always pay attention to the order in which your logical operators are listed in your expressions, and whenever possible, include parentheses to ensure that the expressions are evaluated in the way you intend!**</mark>
 
@@ -416,7 +806,61 @@ GROUP BY group_name
 
 ```python
 %%sql
+SELECT d.dog_guid, d.breed_type, COUNT(c.created_at) as num_tests, 
+IF(d.breed_type='Pure Breed','Pure Breed','Not Pure Breed') AS pure_or_not
+FROM dogs d, complete_tests c
+WHERE d.dog_guid=c.dog_guid
+GROUP BY d.dog_guid, d.breed_type, pure_or_not
+LIMIT 5
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>dog_guid</th>
+        <th>breed_type</th>
+        <th>num_tests</th>
+        <th>pure_or_not</th>
+    </tr>
+    <tr>
+        <td>fd27b272-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Pure Breed</td>
+        <td>21</td>
+        <td>Pure Breed</td>
+    </tr>
+    <tr>
+        <td>fd27b5ba-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Pure Breed</td>
+        <td>20</td>
+        <td>Pure Breed</td>
+    </tr>
+    <tr>
+        <td>fd27b6b4-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Pure Breed</td>
+        <td>2</td>
+        <td>Pure Breed</td>
+    </tr>
+    <tr>
+        <td>fd27b79a-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Pure Breed</td>
+        <td>11</td>
+        <td>Pure Breed</td>
+    </tr>
+    <tr>
+        <td>fd27b86c-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Pure Breed</td>
+        <td>31</td>
+        <td>Pure Breed</td>
+    </tr>
+</table>
+
+
 
 **Question 11: Write a query that uses a CASE statement to report the number of unique user_guids associated with customers who live in the United States and who are in the following groups of states:**
 
@@ -432,14 +876,79 @@ Group 4: All other states with non-null values**
 
 ```python
 %%sql
+SELECT CASE 
+            WHEN cleaned_users.state = "NY" OR cleaned_users.state = "NJ" THEN "group 1"
+            WHEN cleaned_users.state = "NC" OR cleaned_users.state = "SC" THEN "group 2"
+            WHEN cleaned_users.state = "CA" THEN "group 3"
+            ELSE "group 4"
+            END AS US_user, 
+      count(cleaned_users.user_guid)   
+FROM (SELECT DISTINCT user_guid, country, state 
+      FROM users
+      WHERE country='US' AND state IS NOT NULL) AS cleaned_users
+GROUP BY US_user
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    4 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>US_user</th>
+        <th>count(cleaned_users.user_guid)</th>
+    </tr>
+    <tr>
+        <td>group 1</td>
+        <td>898</td>
+    </tr>
+    <tr>
+        <td>group 2</td>
+        <td>653</td>
+    </tr>
+    <tr>
+        <td>group 3</td>
+        <td>1417</td>
+    </tr>
+    <tr>
+        <td>group 4</td>
+        <td>6388</td>
+    </tr>
+</table>
+
+
 
 **Question 12: Write a query that allows you to determine how many unique dog_guids are associated with dogs who are DNA tested and have either stargazer or socialite personality dimensions.  Your answer should be 70.**
 
 
 ```python
 %%sql
+SELECT COUNT(DISTINCT dog_guid)
+FROM dogs
+WHERE dna_tested=1 AND (dimension='stargazer' OR dimension='socialite')
+
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    1 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>COUNT(DISTINCT dog_guid)</th>
+    </tr>
+    <tr>
+        <td>70</td>
+    </tr>
+</table>
+
+
 
 **Feel free to practice any other queries you like here!**
 
