@@ -219,7 +219,8 @@ Now we need to summarize the total number of tests completed by each unique DogI
 
 ```python
 %%sql
-SELECT tests_per_dog.dimension, AVG(tests_per_dog.numtests) as average
+SELECT tests_per_dog.dimension, AVG(tests_per_dog.numtests) as average,
+COUNT(DISTINCT dogID) as num_dogs
 FROM (SELECT d.dog_guid AS dogID, d.dimension AS dimension, count(c.created_at) AS
     numtests
     FROM dogs d INNER JOIN complete_tests c ON d.dog_guid=c.dog_guid
@@ -239,50 +240,62 @@ ORDER BY average DESC
     <tr>
         <th>dimension</th>
         <th>average</th>
+        <th>num_dogs</th>
     </tr>
     <tr>
         <td>expert</td>
         <td>23.3926</td>
+        <td>298</td>
     </tr>
     <tr>
         <td>ace</td>
         <td>23.3878</td>
+        <td>477</td>
     </tr>
     <tr>
         <td>charmer</td>
         <td>23.2594</td>
+        <td>690</td>
     </tr>
     <tr>
         <td>einstein</td>
         <td>23.2171</td>
+        <td>129</td>
     </tr>
     <tr>
         <td>socialite</td>
         <td>23.1194</td>
+        <td>871</td>
     </tr>
     <tr>
         <td>renaissance-dog</td>
         <td>23.0157</td>
+        <td>510</td>
     </tr>
     <tr>
         <td>protodog</td>
         <td>22.9336</td>
+        <td>602</td>
     </tr>
     <tr>
         <td>maverick</td>
         <td>22.8199</td>
+        <td>272</td>
     </tr>
     <tr>
         <td>stargazer</td>
         <td>22.7368</td>
+        <td>361</td>
     </tr>
     <tr>
         <td></td>
         <td>9.5352</td>
+        <td>71</td>
     </tr>
     <tr>
         <td>None</td>
         <td>6.9416</td>
+        <td>13705</td>
     </tr>
 </table>
 
@@ -338,8 +351,74 @@ The non-NULL empty string values are more curious.  It is not clear where those 
 
 ```python
 %%sql
-
+SELECT d.breed, d.weight, d.exclude, MIN(c.created_at) AS first_test,
+MAX(c.created_at) AS last_test,count(c.created_at) AS numtests
+FROM dogs d JOIN complete_tests c
+ON d.dog_guid=c.dog_guid
+WHERE d.dimension=''
+GROUP BY d.dog_guid
+LIMIT 5;
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>breed</th>
+        <th>weight</th>
+        <th>exclude</th>
+        <th>first_test</th>
+        <th>last_test</th>
+        <th>numtests</th>
+    </tr>
+    <tr>
+        <td>Golden Retriever</td>
+        <td>30</td>
+        <td>0</td>
+        <td>2013-05-23 07:06:21</td>
+        <td>2013-07-02 12:15:18</td>
+        <td>17</td>
+    </tr>
+    <tr>
+        <td>Dachshund</td>
+        <td>10</td>
+        <td>1</td>
+        <td>2014-10-21 18:53:02</td>
+        <td>2014-10-21 19:10:07</td>
+        <td>3</td>
+    </tr>
+    <tr>
+        <td>Border Collie-Labrador Retriever Mix</td>
+        <td>50</td>
+        <td>0</td>
+        <td>2013-11-16 02:26:15</td>
+        <td>2013-11-16 02:38:57</td>
+        <td>4</td>
+    </tr>
+    <tr>
+        <td>Belgian Tervuren</td>
+        <td>70</td>
+        <td>1</td>
+        <td>2014-11-10 21:21:06</td>
+        <td>2014-12-16 01:13:28</td>
+        <td>13</td>
+    </tr>
+    <tr>
+        <td>Pembroke Welsh Corgi</td>
+        <td>20</td>
+        <td>1</td>
+        <td>2014-09-19 17:42:37</td>
+        <td>2014-09-22 17:58:25</td>
+        <td>4</td>
+    </tr>
+</table>
+
+
 
 A quick inspection of the output from the last query illustrates that almost all of the entries that have non-NULL empty strings in the dimension column also have "exclude" flags of 1, meaning that the entries are meant to be excluded due to factors monitored by the Dognition team.  This provides a good argument for excluding the entire category of entries that have non-NULL empty strings in the dimension column from our analyses.
 
@@ -348,7 +427,78 @@ A quick inspection of the output from the last query illustrates that almost all
 
 ```python
 %%sql
+SELECT tests_per_dog.dimension, AVG(tests_per_dog.numtests) as average,
+COUNT(DISTINCT dogID) as num_dogs
+FROM (SELECT d.dog_guid AS dogID, d.dimension AS dimension, count(c.created_at) AS
+    numtests
+    FROM dogs d INNER JOIN complete_tests c ON d.dog_guid=c.dog_guid
+    WHERE dimension IS NOT NULL AND dimension!=''AND (d.exclude=0 OR d.exclude IS NULL)
+    GROUP BY dogID) as tests_per_dog
+GROUP BY tests_per_dog.dimension
+ORDER BY average DESC
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    9 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>dimension</th>
+        <th>average</th>
+        <th>num_dogs</th>
+    </tr>
+    <tr>
+        <td>ace</td>
+        <td>23.5100</td>
+        <td>402</td>
+    </tr>
+    <tr>
+        <td>expert</td>
+        <td>23.4249</td>
+        <td>273</td>
+    </tr>
+    <tr>
+        <td>charmer</td>
+        <td>23.3594</td>
+        <td>626</td>
+    </tr>
+    <tr>
+        <td>einstein</td>
+        <td>23.2385</td>
+        <td>109</td>
+    </tr>
+    <tr>
+        <td>socialite</td>
+        <td>23.0997</td>
+        <td>792</td>
+    </tr>
+    <tr>
+        <td>renaissance-dog</td>
+        <td>23.0410</td>
+        <td>463</td>
+    </tr>
+    <tr>
+        <td>protodog</td>
+        <td>22.9570</td>
+        <td>535</td>
+    </tr>
+    <tr>
+        <td>stargazer</td>
+        <td>22.7968</td>
+        <td>310</td>
+    </tr>
+    <tr>
+        <td>maverick</td>
+        <td>22.7673</td>
+        <td>245</td>
+    </tr>
+</table>
+
+
 
 The results of Question 7 suggest there are not appreciable differences in the number of tests completed by dogs with different Dognition personality dimensions.  Although these analyses are not definitive on their own, these results suggest focusing on Dognition personality dimensions will not likely lead to significant insights about how to improve Dognition completion rates.
 
@@ -365,7 +515,50 @@ First, determine how many distinct breed groups there are.
 
 ```python
 %%sql
+SELECT DISTINCT breed_group FROM dogs
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    9 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>breed_group</th>
+    </tr>
+    <tr>
+        <td>Sporting</td>
+    </tr>
+    <tr>
+        <td>Herding</td>
+    </tr>
+    <tr>
+        <td>Toy</td>
+    </tr>
+    <tr>
+        <td>Working</td>
+    </tr>
+    <tr>
+        <td>None</td>
+    </tr>
+    <tr>
+        <td>Hound</td>
+    </tr>
+    <tr>
+        <td>Non-Sporting</td>
+    </tr>
+    <tr>
+        <td>Terrier</td>
+    </tr>
+    <tr>
+        <td></td>
+    </tr>
+</table>
+
+
 
 You can see that there are NULL values in the breed_group field.  Let's examine the properties of these entries with NULL values to determine whether they should be excluded from our analysis.
 
@@ -374,7 +567,74 @@ You can see that there are NULL values in the breed_group field.  Let's examine 
 
 ```python
 %%sql
+SELECT d.breed, d.weight, d.exclude, MIN(c.created_at) AS first_test,
+MAX(c.created_at) AS last_test,count(c.created_at) AS numtests
+FROM dogs d JOIN complete_tests c
+ON d.dog_guid=c.dog_guid
+WHERE d.breed_group IS NULL
+GROUP BY d.dog_guid
+LIMIT 5;
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>breed</th>
+        <th>weight</th>
+        <th>exclude</th>
+        <th>first_test</th>
+        <th>last_test</th>
+        <th>numtests</th>
+    </tr>
+    <tr>
+        <td>Mixed</td>
+        <td>50</td>
+        <td>None</td>
+        <td>2013-02-05 18:57:05</td>
+        <td>2013-02-05 22:38:01</td>
+        <td>20</td>
+    </tr>
+    <tr>
+        <td>Shih Tzu-Poodle Mix</td>
+        <td>0</td>
+        <td>None</td>
+        <td>2013-02-05 21:44:38</td>
+        <td>2013-02-10 03:33:37</td>
+        <td>20</td>
+    </tr>
+    <tr>
+        <td>German Shepherd Dog-Pembroke Welsh Corgi Mix</td>
+        <td>40</td>
+        <td>None</td>
+        <td>2013-02-06 04:45:28</td>
+        <td>2014-01-06 05:58:13</td>
+        <td>14</td>
+    </tr>
+    <tr>
+        <td>German Shepherd Dog-Nova Scotia Duck Tolling Retriever Mix</td>
+        <td>30</td>
+        <td>None</td>
+        <td>2013-05-17 17:45:46</td>
+        <td>2013-06-14 23:42:53</td>
+        <td>11</td>
+    </tr>
+    <tr>
+        <td>Mixed</td>
+        <td>10</td>
+        <td>None</td>
+        <td>2013-02-06 04:44:50</td>
+        <td>2013-02-06 04:48:29</td>
+        <td>2</td>
+    </tr>
+</table>
+
+
 
 There are a lot of these entries and there is no obvious feature that is common to all of them, so at present, we do not have a good reason to exclude them from our analysis.  Therefore, let's move on to question 10 now....
 
@@ -384,7 +644,78 @@ There are a lot of these entries and there is no obvious feature that is common 
 
 ```python
 %%sql
+SELECT breed_group, AVG(tests_per_dog.numtests) as average,
+COUNT(DISTINCT dogID) as num_dogs
+FROM (SELECT d.dog_guid AS dogID, d.breed_group AS breed_group, count(c.created_at) AS
+    numtests
+    FROM dogs d INNER JOIN complete_tests c ON d.dog_guid=c.dog_guid
+    WHERE d.exclude=0 OR d.exclude IS NULL
+    GROUP BY dogID) as tests_per_dog
+GROUP BY breed_group
+ORDER BY average DESC
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    9 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>breed_group</th>
+        <th>average</th>
+        <th>num_dogs</th>
+    </tr>
+    <tr>
+        <td></td>
+        <td>19.7542</td>
+        <td>179</td>
+    </tr>
+    <tr>
+        <td>Herding</td>
+        <td>11.2469</td>
+        <td>1774</td>
+    </tr>
+    <tr>
+        <td>Sporting</td>
+        <td>10.9915</td>
+        <td>2470</td>
+    </tr>
+    <tr>
+        <td>Working</td>
+        <td>10.2358</td>
+        <td>865</td>
+    </tr>
+    <tr>
+        <td>None</td>
+        <td>10.2251</td>
+        <td>8564</td>
+    </tr>
+    <tr>
+        <td>Hound</td>
+        <td>10.0603</td>
+        <td>564</td>
+    </tr>
+    <tr>
+        <td>Non-Sporting</td>
+        <td>10.0197</td>
+        <td>964</td>
+    </tr>
+    <tr>
+        <td>Terrier</td>
+        <td>9.9333</td>
+        <td>780</td>
+    </tr>
+    <tr>
+        <td>Toy</td>
+        <td>8.7157</td>
+        <td>1041</td>
+    </tr>
+</table>
+
+
 
 The results show there are non-NULL entries of empty strings in breed_group column again.  Ignoring them for now, Herding and Sporting breed_groups complete the most tests, while Toy breed groups complete the least tests.  This suggests that one avenue an analyst might want to explore further is whether it is worth it to target marketing or certain types of Dognition tests to dog owners with dogs in the Herding and Sporting breed_groups.  Later in this lesson we will discuss whether using a median instead of an average to summarize the number of completed tests might affect this potential course of action. 
 
@@ -393,7 +724,53 @@ The results show there are non-NULL entries of empty strings in breed_group colu
 
 ```python
 %%sql
+SELECT breed_group, AVG(tests_per_dog.numtests) as average,
+COUNT(DISTINCT dogID) as num_dogs
+FROM (SELECT d.dog_guid AS dogID, d.breed_group AS breed_group, count(c.created_at) AS
+    numtests
+    FROM dogs d INNER JOIN complete_tests c ON d.dog_guid=c.dog_guid
+    WHERE (d.exclude=0 OR d.exclude IS NULL) AND d.breed_group IN ('Sporting', 'Hound', 'Herding', 'Working')
+    GROUP BY dogID) as tests_per_dog
+GROUP BY breed_group
+ORDER BY average DESC
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    4 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>breed_group</th>
+        <th>average</th>
+        <th>num_dogs</th>
+    </tr>
+    <tr>
+        <td>Herding</td>
+        <td>11.2469</td>
+        <td>1774</td>
+    </tr>
+    <tr>
+        <td>Sporting</td>
+        <td>10.9915</td>
+        <td>2470</td>
+    </tr>
+    <tr>
+        <td>Working</td>
+        <td>10.2358</td>
+        <td>865</td>
+    </tr>
+    <tr>
+        <td>Hound</td>
+        <td>10.0603</td>
+        <td>564</td>
+    </tr>
+</table>
+
+
 
 Next, let's examine the relationship between breed_type and number of completed tests.  
 
@@ -402,14 +779,88 @@ Next, let's examine the relationship between breed_type and number of completed 
 
 ```python
 %%sql
+SELECT DISTINCT breed_type FROM dogs
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    4 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>breed_type</th>
+    </tr>
+    <tr>
+        <td>Pure Breed</td>
+    </tr>
+    <tr>
+        <td>Mixed Breed/ Other/ I Don&#x27;t Know</td>
+    </tr>
+    <tr>
+        <td>Cross Breed</td>
+    </tr>
+    <tr>
+        <td>Popular Hybrid</td>
+    </tr>
+</table>
+
+
 
 **Question 13: Adapt the query in Question 7 to examine the relationship between breed_type and number of tests completed. Exclude DogIDs with values of "1" in the exclude column. Your results should return 8865 DogIDs in the Pure Breed group.**
 
 
 ```python
 %%sql
+SELECT breed_type, AVG(tests_per_dog.numtests) as average,
+COUNT(DISTINCT dogID) as num_dogs
+FROM (SELECT d.dog_guid AS dogID, d.breed_type AS breed_type, count(c.created_at) AS
+    numtests
+    FROM dogs d INNER JOIN complete_tests c ON d.dog_guid=c.dog_guid
+    WHERE d.exclude=0 OR d.exclude IS NULL
+    GROUP BY dogID) as tests_per_dog
+GROUP BY breed_type
+ORDER BY average DESC
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    4 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>breed_type</th>
+        <th>average</th>
+        <th>num_dogs</th>
+    </tr>
+    <tr>
+        <td>Popular Hybrid</td>
+        <td>10.8423</td>
+        <td>634</td>
+    </tr>
+    <tr>
+        <td>Cross Breed</td>
+        <td>10.6009</td>
+        <td>2884</td>
+    </tr>
+    <tr>
+        <td>Pure Breed</td>
+        <td>10.4107</td>
+        <td>8865</td>
+    </tr>
+    <tr>
+        <td>Mixed Breed/ Other/ I Don&#x27;t Know</td>
+        <td>10.2688</td>
+        <td>4818</td>
+    </tr>
+</table>
+
+
 
 There does not appear to be an appreciable difference between number of tests completed by dogs of different breed types.
     
@@ -423,21 +874,184 @@ To explore the results we found above a little further, let's run some queries t
 
 ```python
 %%sql
+SELECT AVG(tests_per_dog.numtests) as average, numtests,
+    CASE breed_type
+        WHEN 'Pure Breed' THEN 'Pure Breed'
+        ELSE 'Not Pure Breed'
+        END AS pure_or_not
+FROM (SELECT d.dog_guid AS dogID, d.breed_type AS breed_type, count(c.created_at) AS
+    numtests
+    FROM dogs d INNER JOIN complete_tests c ON d.dog_guid=c.dog_guid
+    WHERE d.exclude=0 OR d.exclude IS NULL
+    GROUP BY dogID) as tests_per_dog
+LIMIT 5
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    5 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>dogID</th>
+        <th>breed_type</th>
+        <th>numtests</th>
+        <th>pure_or_not</th>
+    </tr>
+    <tr>
+        <td>fd27b272-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Pure Breed</td>
+        <td>21</td>
+        <td>Pure Breed</td>
+    </tr>
+    <tr>
+        <td>fd27b5ba-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Pure Breed</td>
+        <td>20</td>
+        <td>Pure Breed</td>
+    </tr>
+    <tr>
+        <td>fd27b6b4-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Pure Breed</td>
+        <td>2</td>
+        <td>Pure Breed</td>
+    </tr>
+    <tr>
+        <td>fd27b79a-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Pure Breed</td>
+        <td>11</td>
+        <td>Pure Breed</td>
+    </tr>
+    <tr>
+        <td>fd27b948-7144-11e5-ba71-058fbc01cf0b</td>
+        <td>Pure Breed</td>
+        <td>20</td>
+        <td>Pure Breed</td>
+    </tr>
+</table>
+
+
 
 **Question 15: Adapt your queries from Questions 7 and 14 to examine the relationship between breed_type and number of tests completed by Pure_Breed dogs and non_Pure_Breed dogs.  Your results should return 8336 DogIDs in the Not_Pure_Breed group.**
 
 
 ```python
 %%sql
+SELECT CASE breed_type
+        WHEN 'Pure Breed' THEN 'Pure Breed'
+        ELSE 'Not Pure Breed'
+        END AS pure_or_not,
+AVG(tests_per_dog.numtests) as average, COUNT(DISTINCT dogID) as num_dogs
+FROM (SELECT d.dog_guid AS dogID, d.breed_type AS breed_type, count(c.created_at) AS
+    numtests
+    FROM dogs d INNER JOIN complete_tests c ON d.dog_guid=c.dog_guid
+    WHERE d.exclude=0 OR d.exclude IS NULL
+    GROUP BY dogID) as tests_per_dog
+GROUP BY pure_or_not
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    2 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>pure_or_not</th>
+        <th>average</th>
+        <th>num_dogs</th>
+    </tr>
+    <tr>
+        <td>Not Pure Breed</td>
+        <td>10.4273</td>
+        <td>8336</td>
+    </tr>
+    <tr>
+        <td>Pure Breed</td>
+        <td>10.4107</td>
+        <td>8865</td>
+    </tr>
+</table>
+
+
 
 **Question 16: Adapt your query from Question 15 to examine the relationship between breed_type, whether or not a dog was neutered (indicated in the dog_fixed field), and number of tests completed by Pure_Breed dogs and non_Pure_Breed dogs. There are DogIDs with null values in the dog_fixed column, so your results should have 6 rows, and the average number of tests completed by non-pure-breeds who are neutered is 10.5681.**
 
 
 ```python
 %%sql
+SELECT CASE breed_type
+        WHEN 'Pure Breed' THEN 'Pure Breed'
+        ELSE 'Not Pure Breed'
+        END AS pure_or_not,
+neutered, AVG(tests_per_dog.numtests) as average, 
+COUNT(DISTINCT dogID) as num_dogs
+FROM (SELECT d.dog_guid AS dogID, d.dog_fixed AS neutered, d.breed_type AS breed_type, count(c.created_at) AS
+    numtests
+    FROM dogs d INNER JOIN complete_tests c ON d.dog_guid=c.dog_guid
+    WHERE d.exclude=0 OR d.exclude IS NULL
+    GROUP BY dogID) as tests_per_dog
+GROUP BY pure_or_not, neutered
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    6 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>pure_or_not</th>
+        <th>neutered</th>
+        <th>average</th>
+        <th>num_dogs</th>
+    </tr>
+    <tr>
+        <td>Not Pure Breed</td>
+        <td>None</td>
+        <td>9.9897</td>
+        <td>97</td>
+    </tr>
+    <tr>
+        <td>Not Pure Breed</td>
+        <td>0</td>
+        <td>8.6807</td>
+        <td>592</td>
+    </tr>
+    <tr>
+        <td>Not Pure Breed</td>
+        <td>1</td>
+        <td>10.5681</td>
+        <td>7647</td>
+    </tr>
+    <tr>
+        <td>Pure Breed</td>
+        <td>None</td>
+        <td>8.2815</td>
+        <td>135</td>
+    </tr>
+    <tr>
+        <td>Pure Breed</td>
+        <td>0</td>
+        <td>9.3788</td>
+        <td>1687</td>
+    </tr>
+    <tr>
+        <td>Pure Breed</td>
+        <td>1</td>
+        <td>10.6987</td>
+        <td>7043</td>
+    </tr>
+</table>
+
+
 
 These results suggest that although a dog's breed_type doesn't seem to have a strong relationship with how many tests a dog completed, neutered dogs, on average, seem to finish 1-2 more tests than non-neutered dogs.  It may be fruitful to explore further whether this effect is consistent across different segments of dogs broken up according to other variables.  If the effects are consistent, the next step would be to seek evidence that could clarify whether neutered dogs are finishing more tests due to traits that arise when a dog is neutered, or instead, whether owners who are more likely to neuter their dogs have traits that make it more likely they will want to complete more tests.
 
@@ -466,7 +1080,90 @@ Let's practice including standard deviations in our queries and interpretting th
 
 ```python
 %%sql
+SELECT dimension, AVG(numtests) AS avg_tests_completed, COUNT(DISTINCT
+dogID),
+STDDEV(numtests)
+FROM( SELECT d.dog_guid AS dogID, d.dimension AS dimension, count(c.created_at)
+AS numtests
+FROM dogs d JOIN complete_tests c
+ON d.dog_guid=c.dog_guid
+WHERE (dimension IS NOT NULL AND dimension!='') AND (d.exclude IS NULL
+OR d.exclude=0)
+GROUP BY dogID) AS numtests_per_dog
+GROUP BY numtests_per_dog.dimension;
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    9 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>dimension</th>
+        <th>avg_tests_completed</th>
+        <th>COUNT(DISTINCT<br>dogID)</th>
+        <th>STDDEV(numtests)</th>
+    </tr>
+    <tr>
+        <td>ace</td>
+        <td>23.5100</td>
+        <td>402</td>
+        <td>5.489578593285022</td>
+    </tr>
+    <tr>
+        <td>charmer</td>
+        <td>23.3594</td>
+        <td>626</td>
+        <td>5.191866549087362</td>
+    </tr>
+    <tr>
+        <td>einstein</td>
+        <td>23.2385</td>
+        <td>109</td>
+        <td>5.315545977410012</td>
+    </tr>
+    <tr>
+        <td>expert</td>
+        <td>23.4249</td>
+        <td>273</td>
+        <td>4.75891706780867</td>
+    </tr>
+    <tr>
+        <td>maverick</td>
+        <td>22.7673</td>
+        <td>245</td>
+        <td>4.735337746508802</td>
+    </tr>
+    <tr>
+        <td>protodog</td>
+        <td>22.9570</td>
+        <td>535</td>
+        <td>5.3742221719225265</td>
+    </tr>
+    <tr>
+        <td>renaissance-dog</td>
+        <td>23.0410</td>
+        <td>463</td>
+        <td>4.9507772155014935</td>
+    </tr>
+    <tr>
+        <td>socialite</td>
+        <td>23.0997</td>
+        <td>792</td>
+        <td>4.974825507002217</td>
+    </tr>
+    <tr>
+        <td>stargazer</td>
+        <td>22.7968</td>
+        <td>310</td>
+        <td>4.825402130724961</td>
+    </tr>
+</table>
+
+
 
 The standard deviations are all around 20-25% of the average values of each personality dimension, and they are not appreciably different across the personality dimensions, so the average values are likely fairly trustworthy.  Let's try calculating the standard deviation of a different measurement.
 
@@ -476,7 +1173,51 @@ The standard deviations are all around 20-25% of the average values of each pers
 
 ```python
 %%sql
+SELECT d.breed_type AS breed_type,
+AVG(TIMESTAMPDIFF(minute,e.start_time,e.end_time)) AS AvgDuration,
+STDDEV(TIMESTAMPDIFF(minute,e.start_time,e.end_time)) AS StdDevDuration
+FROM dogs d JOIN exam_answers e
+ON d.dog_guid=e.dog_guid
+WHERE TIMESTAMPDIFF(minute,e.start_time,e.end_time)>0
+GROUP BY breed_type;
 ```
+
+     * mysql://studentuser:***@localhost/dognitiondb
+    4 rows affected.
+
+
+
+
+
+<table>
+    <tr>
+        <th>breed_type</th>
+        <th>AvgDuration</th>
+        <th>StdDevDuration</th>
+    </tr>
+    <tr>
+        <td>Cross Breed</td>
+        <td>11810.3230</td>
+        <td>59113.45580229881</td>
+    </tr>
+    <tr>
+        <td>Mixed Breed/ Other/ I Don&#x27;t Know</td>
+        <td>9145.1575</td>
+        <td>48748.626840777506</td>
+    </tr>
+    <tr>
+        <td>Popular Hybrid</td>
+        <td>7734.0763</td>
+        <td>45577.65824281632</td>
+    </tr>
+    <tr>
+        <td>Pure Breed</td>
+        <td>12311.2558</td>
+        <td>60997.35425304078</td>
+    </tr>
+</table>
+
+
 
 This time many of the standard deviations have larger magnitudes than the average duration values.  This suggests  there are outliers in the data that are significantly impacting the reported average values, so the average values are not likely trustworthy. These data should be exported to another program for more sophisticated statistical analysis.
 
