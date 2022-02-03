@@ -2,128 +2,73 @@
 
 ## Exercise 1
 
-Use **COUNT** and **DISTINCT** to determine how many distinct skus there are in pairs of the
-_skuinfo_, _skstinfo_, and _trnsact_ tables. Which skus are common to pairs of tables, or unique to specific
-tables?
-
-The significance of your answers will become clear in Exercise 3.
-
-You will only be tested on queries that compare 2 skus in 2 of the tables listed above at a time. However, if you want to try writing queries that compare all 3 tables at once, you might find the following references helpful:
-<http://www.w3resource.com/sql/joins/perform-a-left-join.php>
-<http://www.wellho.net/solutions/mysql-left-joins-to-link-three-or-more-tables.html>
-
-After interpreting the set of queries you decide to implement, you should conclude that only one of the three tables has distinct skus that are not contained in either of the other tables. However, none of the three tables contain the exact same number of distinct skus.
-
-Note that any queries that join on the trnsact table will likely take a while to run.
+How many distinct dates are there in the saledate column of the transaction
+table for each **month/year** combination in the database?
 
 <details>
-  <summary>single queries</summary>
+  <summary>query</summary>
+>>>>>>> Stashed changes
 
 &nbsp;
 
 ```SQL
-SELECT COUNT(DISTINCT sku)
-FROM skuinfo;
+SELECT
+  dates.yr,
+  dates.mon,
+  count(dy) AS dayCount
+FROM
+  (
+    SELECT
+      EXTRACT(
+        Year
+        FROM
+          saledate
+      ) AS Yr,
+      EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) AS mon,
+      EXTRACT(
+        DAY
+        FROM
+          saledate
+      ) AS dy
+    FROM
+      trnsact
+    GROUP BY
+      dy,
+      mon,
+      yr
+  ) AS dates
+GROUP BY
+  dates.yr,
+  dates.mon
+ORDER BY
+  dates.yr ASC,
+  dates.mon ASC;
 ```
-
-Query Result: 1564178
-
-&nbsp;
-
-```SQL
-SELECT COUNT(DISTINCT sku)
-FROM skstinfo;
-```
-
-Query Result: 760212
-
-&nbsp;
-
-```SQL
-SELECT COUNT(DISTINCT sku)
-FROM trnsact;
-```
-
-Query Result: 714499
-
-&nbsp;
 
 </details>
-
-<details>
-  <summary>pair queries</summary>
-
 &nbsp;
-
-```SQL
-SELECT COUNT(DISTINCT u.sku)
-FROM skuinfo u, skstinfo s
-WHERE u.sku=s.sku;
-```
-
-Query Result: 760212
-
-&nbsp;
-
-```SQL
-SELECT COUNT(DISTINCT u.sku)
-FROM skuinfo u, trnsact t
-WHERE u.sku=t.sku;
-```
-
-Query Result: 714499
-
-&nbsp;
-
-```SQL
-SELECT COUNT(DISTINCT s.sku)
-FROM skstinfo s, trnsact t
-WHERE s.sku=t.sku;
-```
-
-Query Result: 542513
-
-</details>
-
-&nbsp;
-
-### B
-
-Use **COUNT** to determine how many instances there are of each sku associated with each store in the
-_skstinfo_ table and the _trnsact_ table?
-
-Note that these queries will take a while to run.
-
-You should see there are multiple instances of every sku/store combination in the _trnsact_ table, but only one instance of every sku/store combination in the _skstinfo_ table. Therefore you could join the _trnsact_ and _skstinfo_
-tables, but you would need to join them on both of the following conditions: **_trnsact.sku= skstinfo.sku AND
-trnsact.store= skstinfo.store_**.
-
-```SQL
-SELECT sku, store, COUNT(*)
-FROM skstinfo
-GROUP BY sku, store
-ORDER BY COUNT(*) DESC;
-```
-
-Query Result: The count is always 1
-
-&nbsp;
-
-```SQL
-SELECT COUNT(DISTINCT u.sku)
-FROM skuinfo u, trnsact t
-WHERE u.sku=t.sku;
-```
 
 Query Result:
 
-| Sku     | Store | Count |
-| ------- | ----- | ----- |
-| 4628597 | 504   | 7933  |
-| 5268597 | 2409  | 7607  |
-| 4628597 | 8402  | 6884  |
-| 8120750 | 9103  | 6570  |
-| 4628597 | 2707  | 6534  |
+|Yr  |mon|dayCount|
+|----|---|--------|
+|2004|8  |31      |
+|2004|9  |30      |
+|2004|10 |31      |
+|2004|11 |29      |
+|2004|12 |30      |
+|2005|1  |31      |
+|2005|2  |28      |
+|2005|3  |30      |
+|2005|4  |30      |
+|2005|5  |31      |
+|2005|6  |30      |
+|2005|7  |31      |
+|2005|8  |27      |
 
 &nbsp;
 
