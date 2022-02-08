@@ -74,77 +74,65 @@ Query Result:
 
 ## Exercise 2
 
-### A
+Use a `CASE` statement within an aggregate function to determine which sku
+had the greatest total sales during the combined summer months of June, July, and August.
 
-Use **COUNT** and **DISTINCT** to determine how many distinct stores there are in the
-_strinfo_, _store_msa_,_skstinfo_, and*trnsact* tables.
-
-You should see that:
-
-distinct stores in strinfo > distinct stores in skstinfo > distinct stores in store_msa > distinct stores in trnsact
-
-Use this information to help you assess which table to query when answering questions about Dillard’s stores in
-the quiz.
-
-&nbsp;
+`CASE` statements can be used with aggregate functions. For example, if you wanted to
+find the greatest (or latest) _saledate_ in December, you could write:
 
 ```SQL
-SELECT COUNT(DISTINCT store)
-FROM strinfo
+MAX(CASE WHEN EXTRACT(MONTH from saledate)=12
+ THEN saledate
+ END) AS last_day_in_Dec
 ```
 
-Query Result: 453
+To determine the _sku_ that had the greatest combined total sales during the summer months, make one `CASE` statement that sums up all the sales in June, another that sums up all the sales in July, and a third that sums up all the sales in August. Then include another field in your `SELECT` statement that adds those 3 numbers together. Group your output by _sku_, and sort the output by
+the derived field that adds the revenue from the 3 months together. Don’t forget to restrict your sales transaction types to purchases.
 
 &nbsp;
 
 ```SQL
-SELECT COUNT(DISTINCT store)
-FROM skstinfo
-```
-
-Query Result: 357
-
-&nbsp;
-
-```SQL
-SELECT COUNT(DISTINCT store)
-FROM store_msa
-```
-
-Query Result: 333
-
-&nbsp;
-
-```SQL
-SELECT COUNT(DISTINCT store)
-FROM trnsact
-```
-
-Query Result: 332
-
-&nbsp;
-
-### B
-
-Which stores are common to all four tables, or unique to specific tables?
-
-Refer to the links provided in Exercise 1a to practice writing queries that compare all 4 tables at once
-
-```SQL
-SELECT strinfo.store
-FROM strinfo INNER JOIN skstinfo ON strinfo.store = skstinfo.tore
-INNER JOIN store_msa ON skstinfo.store = store_msa.store
-INNER JOIN trnsact ON store_msa.store = trnsact.store;
-
-SELECT DISTINCT strinfo.store, skstinfo.store, store_msa.store, trnsact.store
-FROM ((strinfo LEFT JOIN skstinfo ON strinfo.store = skstinfo.store)
-LEFT JOIN store_msa ON skstinfo.store = store_msa.store)
-LEFT JOIN trnsact ON store_msa.store = trnsact.store
-
-
+SELECT TOP 5
+  sales_by_month.sku,
+  sum(sales_by_month.amount) AS sales_amount
+FROM
+  (
+    SELECT
+      EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) AS mon,
+      sku,
+      sum(amt) AS amount
+    FROM
+      trnsact
+    WHERE
+      stype = 'P'
+      AND (
+        mon = 6
+        OR mon = 7
+        OR mon = 8
+      )
+    GROUP BY
+      mon,
+      sku
+  ) AS sales_by_month
+GROUP BY
+  sales_by_month.sku
+ORDER BY
+  sales_amount DESC;
 ```
 
 Query Result:
+
+|SKU    |sales_amount|
+|-------|------------|
+|4108011|1646017.38  |
+|3524026|1464189.00  |
+|5528349|1315121.00  |
+|3978011|1055862.47  |
+|2783996|897807.01   |
 
 &nbsp;
 
