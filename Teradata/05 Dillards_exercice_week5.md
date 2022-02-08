@@ -7,7 +7,6 @@ table for each **month/year** combination in the database?
 
 <details>
   <summary>query</summary>
->>>>>>> Stashed changes
 
 &nbsp;
 
@@ -86,8 +85,10 @@ MAX(CASE WHEN EXTRACT(MONTH from saledate)=12
  END) AS last_day_in_Dec
 ```
 
-To determine the _sku_ that had the greatest combined total sales during the summer months, make one `CASE` statement that sums up all the sales in June, another that sums up all the sales in July, and a third that sums up all the sales in August. Then include another field in your `SELECT` statement that adds those 3 numbers together. Group your output by _sku_, and sort the output by
-the derived field that adds the revenue from the 3 months together. Don’t forget to restrict your sales transaction types to purchases.
+To determine the _sku_ that had the greatest combined total sales during the summer months, make one `CASE` statement that sums up all the sales in June, another that sums up all the sales in July, and a third that sums up all the sales in August. Then include another field in your `SELECT` statement that adds those 3 numbers together. Group your output by _sku_, and sort the output by the derived field that adds the revenue from the 3 months together. Don’t forget to restrict your sales transaction types to purchases.
+
+<details>
+  <summary>query</summary>
 
 &nbsp;
 
@@ -124,6 +125,9 @@ ORDER BY
   sales_amount DESC;
 ```
 
+</details>
+&nbsp;
+
 Query Result:
 
 |SKU    |sales_amount|
@@ -138,21 +142,75 @@ Query Result:
 
 ## Exercise 3
 
-It turns out **there are many skus in the _trnsact_ table that are not in the _skstinfo_ table**. As a consequence, we will not be able to complete many desirable analyses of Dillard’s profit, as opposed to revenue, because we do not have the cost information for all the skus in the _transact_ table (recall that profit = revenue - cost). Examine some of the rows in the _trnsact_ table that are not in the _skstinfo_ table; can you find any common features that could explain why the cost information is missing?
+How many distinct dates are there in the _saledate_ column of the transaction table **for each month/year/store combination** in the database? Sort your results by the
+number of days per combination in ascending order.
 
-Please note: The join you will need to complete this analysis will take a long time to run. This query will give you a good feeling for what working with enterprise-sized data feels like. You might want to pin the results once you retrieve them so that you can examine the results later in the session.
+You will see there are many month/year/store combinations that only have one day of transaction data stored in the database. In real life, this phenomenon could be a result of data being deleted, Dillard’s stores closing during the year of 2004-2005, or data being entered in error. In our case, it may simply be the result of Dillard's removing some data before donating it. We will need to take these missing data into account in many of our future analyses, especially analyses that aim to compare sales trends within subsets of stores. Start thinking about how you would examine the properties of month/year/store combinations that have a specific minimum number of days of data.
+
+<details>
+  <summary>query</summary>
 
 &nbsp;
 
 ```SQL
-SELECT *
-FROM trnsact
-LEFT JOIN skstinfo ON trnsact.sku = skstinfo.sku
-WHERE skstinfo.sku IS NULL
-
+SELECT
+  dates_by_store.store,
+  dates_by_store.yr,
+  dates_by_store.mon,
+  count(dy) AS dayCount
+FROM
+  (
+    SELECT
+      EXTRACT(
+        Year
+        FROM
+          t.saledate
+      ) AS Yr,
+      EXTRACT(
+        MONTH
+        FROM
+          t.saledate
+      ) AS mon,
+      EXTRACT(
+        DAY
+        FROM
+          t.saledate
+      ) AS dy,
+      t.store
+    FROM
+      trnsact t
+      JOIN store_msa s ON t.store = s.store
+    GROUP BY
+      dy,
+      mon,
+      yr,
+      t.store
+  ) AS dates_by_store
+GROUP BY
+  dates_by_store.store,
+  dates_by_store.yr,
+  dates_by_store.mon
+ORDER BY
+  dayCount
 ```
 
-**Tables:** none
+</details>
+&nbsp;
+
+Query Result:
+
+|STORE|Yr  |mon|dayCount|
+|-----|----|---|--------|
+|8304 |2004|8  |1       |
+|8304 |2005|3  |1       |
+|9906 |2004|8  |1       |
+|7604 |2005|7  |1       |
+|4402 |2004|9  |1       |
+|7203 |2004|8  |3       |
+|6402 |2005|3  |11      |
+|5703 |2005|4  |16      |
+|3002 |2005|3  |16      |
+|1804 |2004|12 |17      |
 
 &nbsp;
 
