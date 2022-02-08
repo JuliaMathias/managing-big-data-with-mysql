@@ -216,35 +216,97 @@ Query Result:
 
 ## Exercise 4
 
-Although we can’t complete all the analyses we’d like to on Dillard’s profit, we can look at general trends. What is Dillard’s average profit per day?
+What is the average daily revenue for each store/month/year combination in
+the database? Calculate this by dividing the total revenue for a group by the number of
+sales days available in the transaction table for that group.
 
-We can justify examining the average profit per day (excluding transactions that cannot be joined with the skstinfo), but we cannot justify examining the total profit over a given timeframe because there are too many
-transactions for which we do not have cost information.
-
-To calculate profit, subtract the total cost of the items in a transaction from the total revenue brought in during the transaction. Refer to the Dillard’s Department Store Database Metadata and what you’ve seen so far to determine what column—or columns—represents total revenue, and what columns are needed to calculate the total cost associated with a transaction (note that some transactions have multiple items, so you will need to take that into account in your calculations, especially your cost calculations). If you are interested in looking at the total value of goods purchased or returned, use the “amt” field. If you are interested in looking at the total number of goods purchased or returned, use the “quantity” field. Make sure to specify the correct stype in your query. Pay close attention to what we learned in Exercise 1b.
-
-If you are calculating the average profit per day correctly, you will find that the average profit per day from
-register 640 is $10,779.20.
-
-the profit of a single transaction is: amt - (cost \* quantity)
-
-so the average profit of an item would be sum(amt) - sum(cost) \* sum(quantity) / count(days)
+<details>
+  <summary>query</summary>
 
 &nbsp;
 
 ```SQL
-SELECT SUM(t.amt) as total_amount,
-SUM(t.quantity) as total_quantity,
-SUM(si.cost) as total_cost,
-COUNT(DISTINCT t.saledate) as number_of_days,
-SUM(amt-(si.cost*t.quantity))/ COUNT(DISTINCT t.saledate) AS avg_sales
-FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
-WHERE stype='P'
+SELECT
+  monthly_revenue_by_store.store,
+  monthly_revenue_by_store.yr,
+  monthly_revenue_by_store.mon,
+  count(dates_by_store.dy) AS dayCount,
+  monthly_revenue_by_store.amount AS revenue,
+  (monthly_revenue_by_store.amount) / (count(dates_by_store.dy)) AS avg_daily_revenue
+FROM
+  (
+    SELECT
+      EXTRACT(
+        Year
+        FROM
+          t.saledate
+      ) AS Yr,
+      EXTRACT(
+        MONTH
+        FROM
+          t.saledate
+      ) AS mon,
+      t.store,
+      SUM(t.amt) AS amount
+    FROM
+      trnsact t
+      JOIN store_msa s ON t.store = s.store
+    WHERE
+      stype = 'P'
+    GROUP BY
+      mon,
+      yr,
+      t.store
+  ) AS monthly_revenue_by_store INNER JOIN (
+  SELECT
+    EXTRACT(
+      Year
+      FROM
+        t.saledate
+    ) AS Yr,
+    EXTRACT(
+      MONTH
+      FROM
+        t.saledate
+    ) AS mon,
+    EXTRACT(
+      DAY
+      FROM
+        t.saledate
+    ) AS dy,
+    t.store
+  FROM
+    trnsact t
+    JOIN store_msa s ON t.store = s.store
+  GROUP BY
+    dy,
+    mon,
+    yr,
+    t.store
+) AS dates_by_store ON monthly_revenue_by_store.store = dates_by_store.store AND monthly_revenue_by_store.yr = dates_by_store.yr AND monthly_revenue_by_store.mon = dates_by_store.mon
+GROUP BY
+  monthly_revenue_by_store.store,
+  monthly_revenue_by_store.yr,
+  monthly_revenue_by_store.mon,
+  revenue
+ORDER BY
+  avg_daily_revenue DESC
+
 ```
 
-| total_amount | total_quantity | total_cost   | days | avg_sales  |
-| ------------ | -------------- | ------------ | ---- | ---------- |
-| 1530055284.6 | 63451484       | 935700838.24 | 389  | 1527903.46 |
+</details>
+&nbsp;
+
+Query Result:
+
+|STORE|Yr  |mon|dayCount|revenue   |avg_daily_revenue|
+|-----|----|---|--------|----------|-----------------|
+|8402 |2004|12 |30      |3152448.34|105081.61        |
+|504  |2004|12 |30      |2724376.37|90812.55         |
+|2707 |2004|12 |30      |2711980.93|90399.36         |
+|1607 |2004|12 |30      |2595369.01|86512.30         |
+|9103 |2004|12 |30      |2437700.70|81256.69         |
+
 
 &nbsp;
 
