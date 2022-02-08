@@ -246,6 +246,39 @@ FROM
         FROM
           t.saledate
       ) AS mon,
+      EXTRACT(
+        DAY
+        FROM
+          t.saledate
+      ) AS dy,
+      t.store
+    FROM
+      trnsact t
+      JOIN store_msa s ON t.store = s.store
+    WHERE
+      stype = 'P'
+      AND (
+        yr <> 2005
+        AND mon <> 8
+      )
+    GROUP BY
+      dy,
+      mon,
+      yr,
+      t.store
+  ) AS dates_by_store
+  INNER JOIN (
+    SELECT
+      EXTRACT(
+        Year
+        FROM
+          t.saledate
+      ) AS Yr,
+      EXTRACT(
+        MONTH
+        FROM
+          t.saledate
+      ) AS mon,
       t.store,
       SUM(t.amt) AS amount
     FROM
@@ -253,42 +286,24 @@ FROM
       JOIN store_msa s ON t.store = s.store
     WHERE
       stype = 'P'
+      AND (
+        yr <> 2005
+        AND mon <> 8
+      )
     GROUP BY
       mon,
       yr,
       t.store
-  ) AS monthly_revenue_by_store INNER JOIN (
-  SELECT
-    EXTRACT(
-      Year
-      FROM
-        t.saledate
-    ) AS Yr,
-    EXTRACT(
-      MONTH
-      FROM
-        t.saledate
-    ) AS mon,
-    EXTRACT(
-      DAY
-      FROM
-        t.saledate
-    ) AS dy,
-    t.store
-  FROM
-    trnsact t
-    JOIN store_msa s ON t.store = s.store
-  GROUP BY
-    dy,
-    mon,
-    yr,
-    t.store
-) AS dates_by_store ON monthly_revenue_by_store.store = dates_by_store.store AND monthly_revenue_by_store.yr = dates_by_store.yr AND monthly_revenue_by_store.mon = dates_by_store.mon
+  ) AS monthly_revenue_by_store ON dates_by_store.store = monthly_revenue_by_store.store
+  AND dates_by_store.yr = monthly_revenue_by_store.yr
+  AND dates_by_store.mon = monthly_revenue_by_store.mon
 GROUP BY
   monthly_revenue_by_store.store,
   monthly_revenue_by_store.yr,
   monthly_revenue_by_store.mon,
   revenue
+HAVING
+  dayCount >= 20
 ORDER BY
   avg_daily_revenue DESC
 
