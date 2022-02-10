@@ -555,122 +555,13 @@ Query Result:
 
 ## Exercise 8
 
-Write a query that retrieves the department descriptions of each of the skus in the `skstinfo` table.
-
-You will need to join 3 tables in this query. Start by writing a query that connects the `skstinfo` and `skuinfo`
-tables. Once you are sure that query works, connect the `deptinfo` table. You may want to explore what happens
-when you incorporate aggregate functions into your query. When you do so, make sure all of your column
-names are referenced by the correct table aliases.
-
-If you have written your query correctly, you will find that the department description for sku #5020024 is “LESLIE”.
-
-<details>
-  <summary>query</summary>
-
-&nbsp;
+Examine all the transactions for the sku with the greatest standard deviation in sprice (ie, your answer to exercise 7) Do you think the original sale price was set to be too high, or was just right?
 
 ```SQL
-SELECT
-  (
-    CASE
-      WHEN m.msa_high > 50
-      AND m.msa_high <= 60 THEN 'low'
-      WHEN m.msa_high > 60.01
-      AND m.msa_high <= 70 THEN 'medium'
-      WHEN m.msa_high > 70 THEN 'high'
-    END
-  ) AS education_level,
-  SUM(daily_total_revenue) / SUM(transact.num_days) AS daily_revenue
-FROM
-  (
-    SELECT
-      COUNT(DISTINCT saledate) AS num_days,
-      (
-        EXTRACT(
-          MONTH
-          FROM
-            saledate
-        )
-      ) AS months,
-      (
-        EXTRACT(
-          YEAR
-          FROM
-            saledate
-        )
-      ) AS years,
-      store,
-      SUM(amt) AS daily_total_revenue,
-      (
-        CASE
-          WHEN EXTRACT(
-            MONTH
-            FROM
-              saledate
-          ) = 8
-          AND EXTRACT(
-            YEAR
-            FROM
-              saledate
-          ) = 2005 THEN 'August 2005'
-        END
-      ) AS month_years
-    FROM
-      trnsact
-    GROUP BY
-      months,
-      years,
-      store,
-      month_years
-    WHERE
-      stype = 'P'
-      AND month_years IS NULL
-      AND EXTRACT(
-        MONTH
-        FROM
-          saledate
-      ) || EXTRACT(
-        YEAR
-        FROM
-          saledate
-      ) || store IN (
-        SELECT
-          EXTRACT(
-            MONTH
-            FROM
-              saledate
-          ) || EXTRACT(
-            YEAR
-            FROM
-              saledate
-          ) || store AS month_year_store
-        FROM
-          trnsact
-        GROUP BY
-          month_year_store
-        HAVING
-          COUNT(DISTINCT saledate) >= 20
-      )
-  ) AS transact
-  JOIN store_msa m ON transact.store = m.store
-GROUP BY
-  education_level
-ORDER BY
-  daily_revenue DESC,
-  education_level;
-
+SELECT * FROM trnsact WHERE sku = '3733090' ORDER BY sprice DESC
 ```
 
-</details>
-&nbsp;
-
-Query Result:
-
-|education_level|daily_revenue|
-|---------------|-------------|
-|low            |34159.76     |
-|medium         |25037.89     |
-|high           |20937.31     |
+The price was right, there were just 2 transactions that were highly irregular.
 
 &nbsp;
 
