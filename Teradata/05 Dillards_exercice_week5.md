@@ -567,16 +567,8 @@ The price was right, there were just 2 transactions that were highly irregular.
 
 ## Exercise 9
 
-What department (with department description), brand, style, and color had the greatest total value of returned items?
-
-You will need to join 3 tables in this query. Start by writing a query that connects 2 tables. Once you are sure
-that query works, connect the 3rd table. Make sure you include both of these fields in the SELECT and GROUP
-BY clauses. Make sure any non-aggregate column in your SELECT list is also listed in your GROUP BY
-clause.
-
-If you have written your query correctly, you will find that the department with the 5th highest total value of
-returned items is #2200 with a department description of “CELEBRT”, a brand of “LANCOME”, a style of
-“1042”, a color of “00-NONE”, and a total value of returned items of $177,142.50.
+What was the average daily revenue Dillard’s brought in during each month of
+the year?
 
 <details>
   <summary>query</summary>
@@ -585,106 +577,58 @@ returned items is #2200 with a department description of “CELEBRT”, a brand 
 
 ```SQL
 SELECT
-  (
-    CASE
-      WHEN m.msa_high > 50
-      AND m.msa_high <= 60 THEN 'low'
-      WHEN m.msa_high > 60.01
-      AND m.msa_high <= 70 THEN 'medium'
-      WHEN m.msa_high > 70 THEN 'high'
-    END
-  ) AS education_level,
-  SUM(daily_total_revenue) / SUM(transact.num_days) AS daily_revenue
+  YearMonth,
+  SUM(rev) / sum(datenum) as average_revenue
 FROM
   (
     SELECT
-      COUNT(DISTINCT saledate) AS num_days,
-      (
-        EXTRACT(
-          MONTH
-          FROM
-            saledate
-        )
-      ) AS months,
-      (
-        EXTRACT(
-          YEAR
-          FROM
-            saledate
-        )
-      ) AS years,
-      store,
-      SUM(amt) AS daily_total_revenue,
-      (
-        CASE
-          WHEN EXTRACT(
-            MONTH
-            FROM
-              saledate
-          ) = 8
-          AND EXTRACT(
-            YEAR
-            FROM
-              saledate
-          ) = 2005 THEN 'August 2005'
-        END
-      ) AS month_years
-    FROM
-      trnsact
-    GROUP BY
-      months,
-      years,
-      store,
-      month_years
-    WHERE
-      stype = 'P'
-      AND month_years IS NULL
-      AND EXTRACT(
-        MONTH
-        FROM
-          saledate
-      ) || EXTRACT(
+      EXTRACT(
         YEAR
         FROM
           saledate
-      ) || store IN (
-        SELECT
-          EXTRACT(
-            MONTH
-            FROM
-              saledate
-          ) || EXTRACT(
-            YEAR
-            FROM
-              saledate
-          ) || store AS month_year_store
+      ) || EXTRACT(
+        MONTH
         FROM
-          trnsact
-        GROUP BY
-          month_year_store
-        HAVING
-          COUNT(DISTINCT saledate) >= 20
-      )
-  ) AS transact
-  JOIN store_msa m ON transact.store = m.store
+          saledate
+      ) AS YearMonth,
+      store,
+      SUM(amt) AS rev,
+      COUNT(DISTINCT saledate) AS datenum
+    FROM
+      trnsact
+    WHERE
+      saledate < '2005-08-01'
+      AND stype = 'P'
+    GROUP BY
+      YearMonth,
+      store
+    HAVING
+      datenum > 19
+  ) AS NewTable
 GROUP BY
-  education_level
+  YearMonth
 ORDER BY
-  daily_revenue DESC,
-  education_level;
-
+  SUM(rev) / sum(datenum) DESC;
 ```
 
 </details>
-&nbsp;
 
 Query Result:
 
-|education_level|daily_revenue|
-|---------------|-------------|
-|low            |34159.76     |
-|medium         |25037.89     |
-|high           |20937.31     |
+|YearMonth             |average_revenue|
+|----------------------|---------------|
+|       2004         12|34981.66       |
+|       2005          2|22745.18       |
+|       2005          7|22473.38       |
+|       2005          4|21401.67       |
+|       2005          3|20633.23       |
+|       2005          5|20585.24       |
+|       2005          6|20140.48       |
+|       2004         11|19404.96       |
+|       2004         10|18893.60       |
+|       2005          1|18022.09       |
+|       2004          9|17611.98       |
+|       2004          8|17384.39       |
 
 &nbsp;
 
