@@ -322,51 +322,122 @@ Query Result:
 |1607 |2004|12 |30      |2595369.01|86512.30         |
 |9103 |2004|12 |30      |2437700.70|81256.69         |
 
-
 &nbsp;
 
 ## Exercise 5
 
-On what day was the total value (in $) of returned goods the greatest? On what day was the total number of individual returned items the greatest?
+What is the average daily revenue brought in by Dillard’s stores in areas of high, medium, or low levels of high school education?
+Define areas of “low” education as those that have high school graduation rates between 50-60%, areas of “medium” education as those that have high school graduation rates between 60.01-70%, and areas of “high” education as those that have high school graduation rates of above 70%.
 
-Make sure to specify the correct stype in your query. If you are interested in looking at the total value of goods
-purchased or returned, use the `amt` field. If you are interested in looking at the total number of goods purchased or returned, use the `quantity` field.
+<details>
+  <summary>query</summary>
 
-- (a) total value
-
-```SQL
-SELECT DISTINCT t.saledate, SUM(t.amt) as total_amount
-FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
-WHERE stype='R'
-GROUP BY t.saledate
-ORDER BY total_amount DESC
-```
-
-| total_amount | sale_date |
-| ------------ | --------- |
-| 1212071.96   | 04/12/27  |
-| 1040333.67   | 04/12/26  |
-| 980995.01    | 05/07/30  |
-| 956986.41    | 05/08/27  |
-| 942881.31    | 04/12/28  |
-
-- (b) amount of goods returned
+&nbsp;
 
 ```SQL
-SELECT DISTINCT t.saledate, SUM(t.quantity) as total_quantity
-FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
-WHERE stype='R'
-GROUP BY t.saledate
-ORDER BY total_quantity DESC
+SELECT
+  (
+    CASE
+      WHEN m.msa_high > 50
+      AND m.msa_high <= 60 THEN 'low'
+      WHEN m.msa_high > 60.01
+      AND m.msa_high <= 70 THEN 'medium'
+      WHEN m.msa_high > 70 THEN 'high'
+    END
+  ) AS education_level,
+  SUM(daily_total_revenue) / SUM(transact.num_days) AS daily_revenue
+FROM
+  (
+    SELECT
+      COUNT(DISTINCT saledate) AS num_days,
+      (
+        EXTRACT(
+          MONTH
+          FROM
+            saledate
+        )
+      ) AS months,
+      (
+        EXTRACT(
+          YEAR
+          FROM
+            saledate
+        )
+      ) AS years,
+      store,
+      SUM(amt) AS daily_total_revenue,
+      (
+        CASE
+          WHEN EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) = 8
+          AND EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) = 2005 THEN 'August 2005'
+        END
+      ) AS month_years
+    FROM
+      trnsact
+    GROUP BY
+      months,
+      years,
+      store,
+      month_years
+    WHERE
+      stype = 'P'
+      AND month_years IS NULL
+      AND EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) || EXTRACT(
+        YEAR
+        FROM
+          saledate
+      ) || store IN (
+        SELECT
+          EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) || EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) || store AS month_year_store
+        FROM
+          trnsact
+        GROUP BY
+          month_year_store
+        HAVING
+          COUNT(DISTINCT saledate) >= 20
+      )
+  ) AS transact
+  JOIN store_msa m ON transact.store = m.store
+GROUP BY
+  education_level
+ORDER BY
+  daily_revenue DESC,
+  education_level;
+
 ```
 
-| total_quantity | sale_date |
-| -------------- | --------- |
-| 36984          | 05/07/30  |
-| 36481          | 05/08/27  |
-| 33723          | 04/12/27  |
-| 31558          | 05/07/29  |
-| 29657          | 05/02/26  |
+</details>
+&nbsp;
+
+Query Result:
+
+|education_level|daily_revenue|
+|---------------|-------------|
+|low            |34159.76     |
+|medium         |25037.89     |
+|high           |20937.31     |
+
+&nbsp;
 
 ## Exercise 6
 
