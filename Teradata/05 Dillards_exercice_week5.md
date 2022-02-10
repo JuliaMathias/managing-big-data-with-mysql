@@ -517,118 +517,39 @@ Query Result:
 
 ## Exercise 7
 
-How many departments have more than 100 brands associated with them, and what are their descriptions?
-
-A **HAVING** clause will be helpful for addressing this question. You will also need a join to combine the
-skuinfo and deptinfo tables in order to retrieve the descriptions of the departments.
-
-<details>
-  <summary>query</summary>
+What is the brand of the sku with the greatest standard deviation in sprice? Only examine skus that have been part of over 100 sales transactions.
 
 &nbsp;
 
 ```SQL
 SELECT
-  (
-    CASE
-      WHEN m.msa_high > 50
-      AND m.msa_high <= 60 THEN 'low'
-      WHEN m.msa_high > 60.01
-      AND m.msa_high <= 70 THEN 'medium'
-      WHEN m.msa_high > 70 THEN 'high'
-    END
-  ) AS education_level,
-  SUM(daily_total_revenue) / SUM(transact.num_days) AS daily_revenue
+  TOP 5 s.sku,
+  s.brand,
+  AVG(t.sprice) AS average_price,
+  STDDEV_SAMP(t.sprice) AS standard_deviation,
+  COUNT(t.trannum) AS transactions
 FROM
-  (
-    SELECT
-      COUNT(DISTINCT saledate) AS num_days,
-      (
-        EXTRACT(
-          MONTH
-          FROM
-            saledate
-        )
-      ) AS months,
-      (
-        EXTRACT(
-          YEAR
-          FROM
-            saledate
-        )
-      ) AS years,
-      store,
-      SUM(amt) AS daily_total_revenue,
-      (
-        CASE
-          WHEN EXTRACT(
-            MONTH
-            FROM
-              saledate
-          ) = 8
-          AND EXTRACT(
-            YEAR
-            FROM
-              saledate
-          ) = 2005 THEN 'August 2005'
-        END
-      ) AS month_years
-    FROM
-      trnsact
-    GROUP BY
-      months,
-      years,
-      store,
-      month_years
-    WHERE
-      stype = 'P'
-      AND month_years IS NULL
-      AND EXTRACT(
-        MONTH
-        FROM
-          saledate
-      ) || EXTRACT(
-        YEAR
-        FROM
-          saledate
-      ) || store IN (
-        SELECT
-          EXTRACT(
-            MONTH
-            FROM
-              saledate
-          ) || EXTRACT(
-            YEAR
-            FROM
-              saledate
-          ) || store AS month_year_store
-        FROM
-          trnsact
-        GROUP BY
-          month_year_store
-        HAVING
-          COUNT(DISTINCT saledate) >= 20
-      )
-  ) AS transact
-  JOIN store_msa m ON transact.store = m.store
+  skuinfo s
+  JOIN trnsact t ON s.sku = t.sku
 GROUP BY
-  education_level
+  1,
+  2
+HAVING
+  COUNT(t.trannum) > 100
 ORDER BY
-  daily_revenue DESC,
-  education_level;
+  STDDEV_SAMP(t.sprice) DESC;
 
 ```
 
-</details>
-&nbsp;
-
 Query Result:
 
-|education_level|daily_revenue|
-|---------------|-------------|
-|low            |34159.76     |
-|medium         |25037.89     |
-|high           |20937.31     |
+|SKU    |BRAND             |average_price     |standard_deviation|transactions|
+|-------|------------------|------------------|------------------|------------|
+|3733090|CABERNET          |11.487134652201659|178.56885261120678|1567        |
+|2762683|HART SCH          |335.7418918918919 |175.85294108489174|111         |
+|5453849|POLO FAS          |286.67936781609194|170.5073654790206 |348         |
+|5623849|POLO FAS          |256.969298245614  |167.50716973395694|228         |
+|4213926|POLO FAS          |250.80502857142858|156.5698185631986 |175         |
 
 &nbsp;
 
