@@ -310,7 +310,6 @@ ORDER BY
 ```
 
 </details>
-&nbsp;
 
 Query Result:
 
@@ -427,7 +426,6 @@ ORDER BY
 ```
 
 </details>
-&nbsp;
 
 Query Result:
 
@@ -441,38 +439,81 @@ Query Result:
 
 ## Exercise 6
 
-What is the maximum price paid for an item in our database? What is the minimum price paid for an item in our database?
+Compare the average daily revenues of the stores with the highest median msa_income and the lowest median msa_income. In what city and state were these stores, and which store had a higher average daily revenue?
 
-Make sure to use the correct column to address these questions (use the same column(s) as you used to calculate revenue). The answer to the minimum price question is likely evidence of more incorrect entries.
+<details>
+  <summary>query</summary>
 
-- (a) maximum price
-
-```SQL
-SELECT TOP 5 *
-FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
-WHERE stype='P'
-ORDER BY t.amt DESC
-
-```
-
-| SKU     | STORE | REGISTER | SALEDATE   | STYPE | QUANTITY | ORGPRICE | SPRICE  | AMT     | STORE | COST    | RETAIL  |
-| ------- | ----- | -------- | ---------- | ----- | -------- | -------- | ------- | ------- | ----- | ------- | ------- |
-| 6200173 | 1607  | 650      | 2005-03-29 | P     | 1        | 6017.00  | 6017.00 | 6017.00 | 1607  | 2700.00 | 6017.00 |
-| 3733090 | 1007  | 550      | 2004-12-31 | P     | 1        | 6.00     | 5005.00 | 5005.00 | 1007  | 2.16    | 6.00    |
-| 9747774 | 5002  | 400      | 2005-07-01 | P     | 1        | 5.00     | 4004.00 | 4004.00 | 5002  | 1.68    | 5.00    |
-| 2139390 | 1607  | 280      | 2005-05-04 | P     | 1        | 1895.00  | 1895.00 | 1895.00 | 1607  | 895.00  | 1895.00 |
-| 4930553 | 209   | 231      | 2005-08-20 | P     | 1        | 1600.00  | 1600.00 | 1600.00 | 209   | 960.00  | 1600.00 |
-
-- (b) minimum price
+&nbsp;
 
 ```SQL
-SELECT TOP 5 *
-FROM trnsact t JOIN skstinfo si ON t.sku=si.sku AND t.store=si.store
-WHERE stype='P' AND t.amt <> 0.00
-ORDER BY t.amt
+SELECT
+  store_info.store,
+  store_info.msa_income,
+  store_info.city,
+  store_info.state,
+  sum(store_info.tot_revenue) / sum(store_info.date_count) AS avg_revenue
+FROM
+  (
+    SELECT
+      s.store,
+      s.msa_income,
+      s.state,
+      s.city,
+      COUNT(DISTINCT t.saledate) AS date_count,
+      SUM(t.amt) AS tot_revenue
+    FROM
+      store_msa AS s
+      INNER JOIN (
+        SELECT
+          min(msa_income) AS min_income,
+          max(msa_income) AS max_income
+        FROM
+          store_msa
+      ) AS mm ON (
+        s.msa_income = mm.min_income
+        OR s.msa_income = mm.max_income
+      )
+      INNER JOIN trnsact AS t ON t.store = s.store
+    WHERE
+      t.stype = 'P'
+      AND (
+        EXTRACT(
+          YEAR
+          FROM
+            t.saledate
+        ) <> 2005
+        OR EXTRACT(
+          MONTH
+          FROM
+            t.saledate
+        ) <> 8
+      )
+    GROUP BY
+      s.store,
+      s.state,
+      s.city,
+      s.msa_income
+  ) AS store_info
+WHERE
+  store_info.date_count >= 20
+GROUP BY
+  store_info.store,
+  store_info.msa_income,
+  store_info.city,
+  store_info.state;
 ```
 
-0.01
+</details>
+
+Query Result:
+
+|STORE|MSA_INCOME|CITY                                    |STATE|avg_revenue|
+|-----|----------|----------------------------------------|-----|-----------|
+|3902 |56099     |SPANISH FORT                            |AL   |17884.08   |
+|2707 |16022     |MCALLEN                                 |TX   |56601.99   |
+
+&nbsp;
 
 ## Exercise 7
 
@@ -481,15 +522,115 @@ How many departments have more than 100 brands associated with them, and what ar
 A **HAVING** clause will be helpful for addressing this question. You will also need a join to combine the
 skuinfo and deptinfo tables in order to retrieve the descriptions of the departments.
 
+<details>
+  <summary>query</summary>
+
+&nbsp;
+
 ```SQL
-SELECT d.dept, d.deptdesc, COUNT(s.brand) as brands
-FROM deptinfo d JOIN skuinfo s ON d.dept=s.dept
-HAVING COUNT(s.brand) > 100
-GROUP BY d.dept, d.deptdesc
-ORDER BY COUNT(s.brand) DESC
+SELECT
+  (
+    CASE
+      WHEN m.msa_high > 50
+      AND m.msa_high <= 60 THEN 'low'
+      WHEN m.msa_high > 60.01
+      AND m.msa_high <= 70 THEN 'medium'
+      WHEN m.msa_high > 70 THEN 'high'
+    END
+  ) AS education_level,
+  SUM(daily_total_revenue) / SUM(transact.num_days) AS daily_revenue
+FROM
+  (
+    SELECT
+      COUNT(DISTINCT saledate) AS num_days,
+      (
+        EXTRACT(
+          MONTH
+          FROM
+            saledate
+        )
+      ) AS months,
+      (
+        EXTRACT(
+          YEAR
+          FROM
+            saledate
+        )
+      ) AS years,
+      store,
+      SUM(amt) AS daily_total_revenue,
+      (
+        CASE
+          WHEN EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) = 8
+          AND EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) = 2005 THEN 'August 2005'
+        END
+      ) AS month_years
+    FROM
+      trnsact
+    GROUP BY
+      months,
+      years,
+      store,
+      month_years
+    WHERE
+      stype = 'P'
+      AND month_years IS NULL
+      AND EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) || EXTRACT(
+        YEAR
+        FROM
+          saledate
+      ) || store IN (
+        SELECT
+          EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) || EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) || store AS month_year_store
+        FROM
+          trnsact
+        GROUP BY
+          month_year_store
+        HAVING
+          COUNT(DISTINCT saledate) >= 20
+      )
+  ) AS transact
+  JOIN store_msa m ON transact.store = m.store
+GROUP BY
+  education_level
+ORDER BY
+  daily_revenue DESC,
+  education_level;
+
 ```
 
-60 depts
+</details>
+&nbsp;
+
+Query Result:
+
+|education_level|daily_revenue|
+|---------------|-------------|
+|low            |34159.76     |
+|medium         |25037.89     |
+|high           |20937.31     |
+
+&nbsp;
 
 ## Exercise 8
 
@@ -502,12 +643,115 @@ names are referenced by the correct table aliases.
 
 If you have written your query correctly, you will find that the department description for sku #5020024 is “LESLIE”.
 
+<details>
+  <summary>query</summary>
+
+&nbsp;
+
 ```SQL
-SELECT skstinfo.sku, skstinfo.store, sku.dept, d.deptdesc
-FROM skstinfo INNER JOIN skuinfo sku ON skstinfo.sku=sku.sku
-INNER JOIN deptinfo d ON sku.dept=d.dept
-WHERE sku.sku = 5020024
+SELECT
+  (
+    CASE
+      WHEN m.msa_high > 50
+      AND m.msa_high <= 60 THEN 'low'
+      WHEN m.msa_high > 60.01
+      AND m.msa_high <= 70 THEN 'medium'
+      WHEN m.msa_high > 70 THEN 'high'
+    END
+  ) AS education_level,
+  SUM(daily_total_revenue) / SUM(transact.num_days) AS daily_revenue
+FROM
+  (
+    SELECT
+      COUNT(DISTINCT saledate) AS num_days,
+      (
+        EXTRACT(
+          MONTH
+          FROM
+            saledate
+        )
+      ) AS months,
+      (
+        EXTRACT(
+          YEAR
+          FROM
+            saledate
+        )
+      ) AS years,
+      store,
+      SUM(amt) AS daily_total_revenue,
+      (
+        CASE
+          WHEN EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) = 8
+          AND EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) = 2005 THEN 'August 2005'
+        END
+      ) AS month_years
+    FROM
+      trnsact
+    GROUP BY
+      months,
+      years,
+      store,
+      month_years
+    WHERE
+      stype = 'P'
+      AND month_years IS NULL
+      AND EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) || EXTRACT(
+        YEAR
+        FROM
+          saledate
+      ) || store IN (
+        SELECT
+          EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) || EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) || store AS month_year_store
+        FROM
+          trnsact
+        GROUP BY
+          month_year_store
+        HAVING
+          COUNT(DISTINCT saledate) >= 20
+      )
+  ) AS transact
+  JOIN store_msa m ON transact.store = m.store
+GROUP BY
+  education_level
+ORDER BY
+  daily_revenue DESC,
+  education_level;
+
 ```
+
+</details>
+&nbsp;
+
+Query Result:
+
+|education_level|daily_revenue|
+|---------------|-------------|
+|low            |34159.76     |
+|medium         |25037.89     |
+|high           |20937.31     |
+
+&nbsp;
 
 ## Exercise 9
 
@@ -522,22 +766,115 @@ If you have written your query correctly, you will find that the department with
 returned items is #2200 with a department description of “CELEBRT”, a brand of “LANCOME”, a style of
 “1042”, a color of “00-NONE”, and a total value of returned items of $177,142.50.
 
+<details>
+  <summary>query</summary>
+
+&nbsp;
+
 ```SQL
-SELECT TOP 5 d.dept, d.deptdesc, SUM(t.amt) as total_amount, s.brand, s.style, s.color
-FROM trnsact t INNER JOIN skuinfo s ON t.sku=s.sku
-INNER JOIN deptinfo d ON s.dept=d.dept
-WHERE stype='R'
-GROUP BY d.dept, d.deptdesc, s.brand, s.style, s.color
-ORDER BY total_amount DESC
+SELECT
+  (
+    CASE
+      WHEN m.msa_high > 50
+      AND m.msa_high <= 60 THEN 'low'
+      WHEN m.msa_high > 60.01
+      AND m.msa_high <= 70 THEN 'medium'
+      WHEN m.msa_high > 70 THEN 'high'
+    END
+  ) AS education_level,
+  SUM(daily_total_revenue) / SUM(transact.num_days) AS daily_revenue
+FROM
+  (
+    SELECT
+      COUNT(DISTINCT saledate) AS num_days,
+      (
+        EXTRACT(
+          MONTH
+          FROM
+            saledate
+        )
+      ) AS months,
+      (
+        EXTRACT(
+          YEAR
+          FROM
+            saledate
+        )
+      ) AS years,
+      store,
+      SUM(amt) AS daily_total_revenue,
+      (
+        CASE
+          WHEN EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) = 8
+          AND EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) = 2005 THEN 'August 2005'
+        END
+      ) AS month_years
+    FROM
+      trnsact
+    GROUP BY
+      months,
+      years,
+      store,
+      month_years
+    WHERE
+      stype = 'P'
+      AND month_years IS NULL
+      AND EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) || EXTRACT(
+        YEAR
+        FROM
+          saledate
+      ) || store IN (
+        SELECT
+          EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) || EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) || store AS month_year_store
+        FROM
+          trnsact
+        GROUP BY
+          month_year_store
+        HAVING
+          COUNT(DISTINCT saledate) >= 20
+      )
+  ) AS transact
+  JOIN store_msa m ON transact.store = m.store
+GROUP BY
+  education_level
+ORDER BY
+  daily_revenue DESC,
+  education_level;
+
 ```
 
-| DEPT | DEPTDESC | total_amount | BRAND    | STYLE        | COLOR      |
-| ---- | -------- | ------------ | -------- | ------------ | ---------- |
-| 4505 | POLOMEN  | 216633.59    | POLO FAS | 4GZ 782633   | U KHAKI    |
-| 7307 | SIGRID O | 202424.05    | NOBLE EX | HMANO ENGLIS | ROSE       |
-| 7307 | SIGRID O | 190183.61    | NOBLE EX | CHLOE        | PETAL PINK |
-| 7307 | SIGRID O | 187096.67    | NOBLE EX | 3133         | SAND       |
-| 2200 | CELEBRT  | 177142.50    | LANCOME  | 1042         | 00-NONE    |
+</details>
+&nbsp;
+
+Query Result:
+
+|education_level|daily_revenue|
+|---------------|-------------|
+|low            |34159.76     |
+|medium         |25037.89     |
+|high           |20937.31     |
+
+&nbsp;
 
 ## Exercise 10
 
@@ -551,23 +888,112 @@ clauses. Don’t forget to specify that you only want to examine purchase transa
 If you have written your query correctly, you will find that the store with the 10th highest total revenue is in
 Hurst, TX.
 
+<details>
+  <summary>query</summary>
+
+&nbsp;
+
 ```SQL
-SELECT TOP 10 SUM(t.amt) as total_amount, t.store, s.state, s.city, s.zip
-FROM trnsact t JOIN store_msa s ON t.store=s.store
-WHERE stype='P'
-GROUP BY t.store, s.state, s.city, s.zip
-ORDER BY total_amount DESC
+SELECT
+  (
+    CASE
+      WHEN m.msa_high > 50
+      AND m.msa_high <= 60 THEN 'low'
+      WHEN m.msa_high > 60.01
+      AND m.msa_high <= 70 THEN 'medium'
+      WHEN m.msa_high > 70 THEN 'high'
+    END
+  ) AS education_level,
+  SUM(daily_total_revenue) / SUM(transact.num_days) AS daily_revenue
+FROM
+  (
+    SELECT
+      COUNT(DISTINCT saledate) AS num_days,
+      (
+        EXTRACT(
+          MONTH
+          FROM
+            saledate
+        )
+      ) AS months,
+      (
+        EXTRACT(
+          YEAR
+          FROM
+            saledate
+        )
+      ) AS years,
+      store,
+      SUM(amt) AS daily_total_revenue,
+      (
+        CASE
+          WHEN EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) = 8
+          AND EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) = 2005 THEN 'August 2005'
+        END
+      ) AS month_years
+    FROM
+      trnsact
+    GROUP BY
+      months,
+      years,
+      store,
+      month_years
+    WHERE
+      stype = 'P'
+      AND month_years IS NULL
+      AND EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) || EXTRACT(
+        YEAR
+        FROM
+          saledate
+      ) || store IN (
+        SELECT
+          EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) || EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) || store AS month_year_store
+        FROM
+          trnsact
+        GROUP BY
+          month_year_store
+        HAVING
+          COUNT(DISTINCT saledate) >= 20
+      )
+  ) AS transact
+  JOIN store_msa m ON transact.store = m.store
+GROUP BY
+  education_level
+ORDER BY
+  daily_revenue DESC,
+  education_level;
+
 ```
 
-| total_amount | STORE | STATE | CITY          | ZIP   |
-| ------------ | ----- | ----- | ------------- | ----- |
-| 24171426.58  | 8402  | LA    | METAIRIE      | 70002 |
-| 22792579.65  | 504   | AR    | LITTLE ROCK   | 72205 |
-| 22331884.55  | 2707  | TX    | MCALLEN       | 78501 |
-| 22063797.73  | 1607  | TX    | DALLAS        | 75225 |
-| 20114154.20  | 9103  | KY    | LOUISVILLE    | 40207 |
-| 19040376.84  | 7507  | TX    | HOUSTON       | 77056 |
-| 18642976.76  | 2203  | KS    | OVERLAND PARK | 66214 |
-| 18458644.39  | 9304  | OK    | OKLAHOMA CITY | 73118 |
-| 18455775.63  | 2007  | TX    | SAN ANTONIO   | 78216 |
-| 17740181.20  | 107   | TX    | HURST         | 76053 |
+</details>
+&nbsp;
+
+Query Result:
+
+|education_level|daily_revenue|
+|---------------|-------------|
+|low            |34159.76     |
+|medium         |25037.89     |
+|high           |20937.31     |
+
+&nbsp;
