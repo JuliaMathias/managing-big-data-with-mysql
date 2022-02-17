@@ -731,15 +731,7 @@ Query Result:
 
 ## Exercise 11
 
-In what state and zip code is the store that had the greatest total revenue during the time
-period monitored in our dataset?
-
-You will need to join two tables to answer this question, and will need to divide your answers up according to
-the “state” and “zip” fields. Make sure you include both of these fields in the SELECT and GROUP BY
-clauses. Don’t forget to specify that you only want to examine purchase transactions (not returns).
-
-If you have written your query correctly, you will find that the store with the 10th highest total revenue is in
-Hurst, TX.
+What is the city and state of the store that had the greatest decrease in average daily revenue from August to September?
 
 <details>
   <summary>query</summary>
@@ -748,93 +740,72 @@ Hurst, TX.
 
 ```SQL
 SELECT
-  (
-    CASE
-      WHEN m.msa_high > 50
-      AND m.msa_high <= 60 THEN 'low'
-      WHEN m.msa_high > 60.01
-      AND m.msa_high <= 70 THEN 'medium'
-      WHEN m.msa_high > 70 THEN 'high'
-    END
-  ) AS education_level,
-  SUM(daily_total_revenue) / SUM(transact.num_days) AS daily_revenue
+  TOP 1 change_by_store.store,
+  change_by_store.percent_change,
+  s.city,
+  s.state
 FROM
   (
     SELECT
-      COUNT(DISTINCT saledate) AS num_days,
+      august.store,
       (
-        EXTRACT(
-          MONTH
-          FROM
-            saledate
-        )
-      ) AS months,
-      (
-        EXTRACT(
-          YEAR
-          FROM
-            saledate
-        )
-      ) AS years,
-      store,
-      SUM(amt) AS daily_total_revenue,
-      (
-        CASE
-          WHEN EXTRACT(
-            MONTH
-            FROM
-              saledate
-          ) = 8
-          AND EXTRACT(
-            YEAR
-            FROM
-              saledate
-          ) = 2005 THEN 'August 2005'
-        END
-      ) AS month_years
+        (
+          (
+            september.daily_average_sep - august.daily_average_aug
+          ) / august.daily_average_aug
+        ) * 100
+      ) AS percent_change
     FROM
-      trnsact
-    GROUP BY
-      months,
-      years,
-      store,
-      month_years
-    WHERE
-      stype = 'P'
-      AND month_years IS NULL
-      AND EXTRACT(
-        MONTH
-        FROM
-          saledate
-      ) || EXTRACT(
-        YEAR
-        FROM
-          saledate
-      ) || store IN (
+      (
         SELECT
-          EXTRACT(
-            MONTH
-            FROM
-              saledate
-          ) || EXTRACT(
-            YEAR
-            FROM
-              saledate
-          ) || store AS month_year_store
+          store,
+          (SUM(amt) / COUNT(DISTINCT saledate)) AS daily_average_aug
         FROM
           trnsact
+        WHERE
+          stype = 'P'
+          AND (
+            EXTRACT(
+              MONTH
+              FROM
+                saledate
+            ) = 08
+            AND EXTRACT(
+              YEAR
+              FROM
+                saledate
+            ) = 2004
+          )
         GROUP BY
-          month_year_store
-        HAVING
-          COUNT(DISTINCT saledate) >= 20
-      )
-  ) AS transact
-  JOIN store_msa m ON transact.store = m.store
-GROUP BY
-  education_level
+          store
+      ) AS august
+      INNER JOIN (
+        SELECT
+          store,
+          (SUM(amt) / COUNT(DISTINCT saledate)) AS daily_average_sep
+        FROM
+          trnsact
+        WHERE
+          stype = 'P'
+          AND (
+            EXTRACT(
+              MONTH
+              FROM
+                saledate
+            ) = 09
+            AND EXTRACT(
+              YEAR
+              FROM
+                saledate
+            ) = 2004
+          )
+        GROUP BY
+          store
+      ) AS september ON august.store = september.store
+  ) AS change_by_store
+  INNER JOIN strinfo s ON change_by_store.store = s.store
 ORDER BY
-  daily_revenue DESC,
-  education_level;
+  change_by_store.percent_change;
 
 ```
 
@@ -843,11 +814,9 @@ ORDER BY
 
 Query Result:
 
-|education_level|daily_revenue|
-|---------------|-------------|
-|low            |34159.76     |
-|medium         |25037.89     |
-|high           |20937.31     |
+|STORE|percent_change|CITY                                    |STATE|
+|-----|--------------|----------------------------------------|-----|
+|4402 |-75.00        |VERO BEACH                              |FL   |
 
 &nbsp;
 
