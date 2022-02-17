@@ -822,110 +822,218 @@ Query Result:
 
 ## Exercise 12
 
-In what state and zip code is the store that had the greatest total revenue during the time
-period monitored in our dataset?
-
-You will need to join two tables to answer this question, and will need to divide your answers up according to
-the “state” and “zip” fields. Make sure you include both of these fields in the SELECT and GROUP BY
-clauses. Don’t forget to specify that you only want to examine purchase transactions (not returns).
-
-If you have written your query correctly, you will find that the store with the 10th highest total revenue is in
-Hurst, TX.
+Determine the month of minimum total revenue for each store. Count the number of stores whose month of minimum total revenue was in each of the twelve months. Then determine the month of minimum average daily revenue. Count the number of stores whose month of minimum average daily revenue was in each of the twelve months. How do they compare?
 
 <details>
-  <summary>query</summary>
+  <summary>month of minimum total revenue for each store</summary>
 
 &nbsp;
 
 ```SQL
 SELECT
-  (
-    CASE
-      WHEN m.msa_high > 50
-      AND m.msa_high <= 60 THEN 'low'
-      WHEN m.msa_high > 60.01
-      AND m.msa_high <= 70 THEN 'medium'
-      WHEN m.msa_high > 70 THEN 'high'
-    END
-  ) AS education_level,
-  SUM(daily_total_revenue) / SUM(transact.num_days) AS daily_revenue
+  monthly_revenue.store,
+  monthly_revenue.dayCount,
+  monthly_revenue.mon,
+  monthly_revenue.yr,
+  minimum_revenue.revenue
 FROM
   (
     SELECT
-      COUNT(DISTINCT saledate) AS num_days,
-      (
-        EXTRACT(
-          MONTH
-          FROM
-            saledate
-        )
-      ) AS months,
-      (
-        EXTRACT(
-          YEAR
-          FROM
-            saledate
-        )
-      ) AS years,
-      store,
-      SUM(amt) AS daily_total_revenue,
-      (
-        CASE
-          WHEN EXTRACT(
-            MONTH
-            FROM
-              saledate
-          ) = 8
-          AND EXTRACT(
-            YEAR
-            FROM
-              saledate
-          ) = 2005 THEN 'August 2005'
-        END
-      ) AS month_years
+      monthly_revenue.store,
+      min(monthly_revenue.revenue) AS revenue
     FROM
-      trnsact
-    GROUP BY
-      months,
-      years,
-      store,
-      month_years
-    WHERE
-      stype = 'P'
-      AND month_years IS NULL
-      AND EXTRACT(
-        MONTH
-        FROM
-          saledate
-      ) || EXTRACT(
-        YEAR
-        FROM
-          saledate
-      ) || store IN (
+      (
         SELECT
+          store,
+          count(DISTINCT saledate) AS dayCount,
           EXTRACT(
             MONTH
             FROM
               saledate
-          ) || EXTRACT(
+          ) AS mon,
+          EXTRACT(
             YEAR
             FROM
               saledate
-          ) || store AS month_year_store
+          ) AS yr,
+          SUM(amt) AS revenue
         FROM
           trnsact
-        GROUP BY
-          month_year_store
+        WHERE
+          stype = 'P'
+          AND (
+            EXTRACT(
+              MONTH
+              FROM
+                saledate
+            ) <> 08
+            AND EXTRACT(
+              YEAR
+              FROM
+                saledate
+            ) <> 2005
+          )
         HAVING
-          COUNT(DISTINCT saledate) >= 20
+          dayCount >= 20
+        GROUP BY
+          store,
+          mon,
+          yr
+      ) AS monthly_revenue
+    GROUP BY
+      monthly_revenue.store
+  ) AS minimum_revenue
+  INNER JOIN (
+    SELECT
+      store,
+      count(DISTINCT saledate) AS dayCount,
+      EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) AS mon,
+      EXTRACT(
+        YEAR
+        FROM
+          saledate
+      ) AS yr,
+      SUM(amt) AS revenue
+    FROM
+      trnsact
+    WHERE
+      stype = 'P'
+      AND (
+        EXTRACT(
+          MONTH
+          FROM
+            saledate
+        ) <> 08
+        AND EXTRACT(
+          YEAR
+          FROM
+            saledate
+        ) <> 2005
       )
-  ) AS transact
-  JOIN store_msa m ON transact.store = m.store
+    HAVING
+      dayCount >= 20
+    GROUP BY
+      store,
+      mon,
+      yr
+  ) AS monthly_revenue ON minimum_revenue.revenue = monthly_revenue.revenue
+  AND minimum_revenue.store = monthly_revenue.store
+
+```
+
+</details>
+&nbsp;
+
+<details>
+  <summary>Count the number of stores whose month of minimum total revenue was in each of the twelve months</summary>
+
+&nbsp;
+
+```SQL
+SELECT
+  min_month.mon,
+  count(min_month.store) AS num_stores
+FROM
+  (
+    SELECT
+      monthly_revenue.store,
+      monthly_revenue.dayCount,
+      monthly_revenue.mon,
+      monthly_revenue.yr,
+      minimum_revenue.revenue
+    FROM
+      (
+        SELECT
+          monthly_revenue.store,
+          min(monthly_revenue.revenue) AS revenue
+        FROM
+          (
+            SELECT
+              store,
+              count(DISTINCT saledate) AS dayCount,
+              EXTRACT(
+                MONTH
+                FROM
+                  saledate
+              ) AS mon,
+              EXTRACT(
+                YEAR
+                FROM
+                  saledate
+              ) AS yr,
+              SUM(amt) AS revenue
+            FROM
+              trnsact
+            WHERE
+              stype = 'P'
+              AND (
+                EXTRACT(
+                  MONTH
+                  FROM
+                    saledate
+                ) <> 08
+                AND EXTRACT(
+                  YEAR
+                  FROM
+                    saledate
+                ) <> 2005
+              )
+            HAVING
+              dayCount >= 20
+            GROUP BY
+              store,
+              mon,
+              yr
+          ) AS monthly_revenue
+        GROUP BY
+          monthly_revenue.store
+      ) AS minimum_revenue
+      INNER JOIN (
+        SELECT
+          store,
+          count(DISTINCT saledate) AS dayCount,
+          EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) AS mon,
+          EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) AS yr,
+          SUM(amt) AS revenue
+        FROM
+          trnsact
+        WHERE
+          stype = 'P'
+          AND (
+            EXTRACT(
+              MONTH
+              FROM
+                saledate
+            ) <> 08
+            AND EXTRACT(
+              YEAR
+              FROM
+                saledate
+            ) <> 2005
+          )
+        HAVING
+          dayCount >= 20
+        GROUP BY
+          store,
+          mon,
+          yr
+      ) AS monthly_revenue ON minimum_revenue.revenue = monthly_revenue.revenue
+      AND minimum_revenue.store = monthly_revenue.store
+  ) AS min_month
 GROUP BY
-  education_level
-ORDER BY
-  daily_revenue DESC,
-  education_level;
+  min_month.mon
 
 ```
 
@@ -934,10 +1042,238 @@ ORDER BY
 
 Query Result:
 
-|education_level|daily_revenue|
-|---------------|-------------|
-|low            |34159.76     |
-|medium         |25037.89     |
-|high           |20937.31     |
+|mon|num_stores|
+|---|----------|
+|9  |201       |
+|11 |95        |
+|10 |28        |
+|12 |1         |
+
+&nbsp;
+
+<details>
+  <summary>Then determine the month of minimum average daily revenue.</summary>
+
+&nbsp;
+
+```SQL
+SELECT
+  monthly_revenue.store,
+  monthly_revenue.dayCount,
+  monthly_revenue.mon,
+  monthly_revenue.yr,
+  minimum_revenue.daily_average_revenue
+FROM
+  (
+    SELECT
+      monthly_revenue.store,
+      min(monthly_revenue.daily_average_revenue) AS daily_average_revenue
+    FROM
+      (
+        SELECT
+          store,
+          count(DISTINCT saledate) AS dayCount,
+          EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) AS mon,
+          EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) AS yr,
+          (SUM(amt) / count(DISTINCT saledate)) AS daily_average_revenue
+        FROM
+          trnsact
+        WHERE
+          stype = 'P'
+          AND (
+            EXTRACT(
+              MONTH
+              FROM
+                saledate
+            ) <> 08
+            AND EXTRACT(
+              YEAR
+              FROM
+                saledate
+            ) <> 2005
+          )
+        HAVING
+          dayCount >= 20
+        GROUP BY
+          store,
+          mon,
+          yr
+      ) AS monthly_revenue
+    GROUP BY
+      monthly_revenue.store
+  ) AS minimum_revenue
+  INNER JOIN (
+    SELECT
+      store,
+      count(DISTINCT saledate) AS dayCount,
+      EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) AS mon,
+      EXTRACT(
+        YEAR
+        FROM
+          saledate
+      ) AS yr,
+      (SUM(amt) / count(DISTINCT saledate)) AS daily_average_revenue
+    FROM
+      trnsact
+    WHERE
+      stype = 'P'
+      AND (
+        EXTRACT(
+          MONTH
+          FROM
+            saledate
+        ) <> 08
+        AND EXTRACT(
+          YEAR
+          FROM
+            saledate
+        ) <> 2005
+      )
+    HAVING
+      dayCount >= 20
+    GROUP BY
+      store,
+      mon,
+      yr
+  ) AS monthly_revenue ON minimum_revenue.daily_average_revenue = monthly_revenue.daily_average_revenue
+  AND minimum_revenue.store = monthly_revenue.store
+
+```
+
+</details>
+&nbsp;
+
+details>
+  <summary>Count the number of stores whose month of minimum average daily revenue was in each of the twelve months</summary>
+
+&nbsp;
+
+```SQL
+SELECT
+  min_month.mon,
+  count(min_month.store) AS num_stores
+FROM
+  (
+    SELECT
+      monthly_revenue.store,
+      monthly_revenue.dayCount,
+      monthly_revenue.mon,
+      monthly_revenue.yr,
+      minimum_revenue.revenue
+    FROM
+      (
+        SELECT
+          monthly_revenue.store,
+          min(monthly_revenue.revenue) AS revenue
+        FROM
+          (
+            SELECT
+              store,
+              count(DISTINCT saledate) AS dayCount,
+              EXTRACT(
+                MONTH
+                FROM
+                  saledate
+              ) AS mon,
+              EXTRACT(
+                YEAR
+                FROM
+                  saledate
+              ) AS yr,
+              SUM(amt) AS revenue
+            FROM
+              trnsact
+            WHERE
+              stype = 'P'
+              AND (
+                EXTRACT(
+                  MONTH
+                  FROM
+                    saledate
+                ) <> 08
+                AND EXTRACT(
+                  YEAR
+                  FROM
+                    saledate
+                ) <> 2005
+              )
+            HAVING
+              dayCount >= 20
+            GROUP BY
+              store,
+              mon,
+              yr
+          ) AS monthly_revenue
+        GROUP BY
+          monthly_revenue.store
+      ) AS minimum_revenue
+      INNER JOIN (
+        SELECT
+          store,
+          count(DISTINCT saledate) AS dayCount,
+          EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) AS mon,
+          EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) AS yr,
+          SUM(amt) AS revenue
+        FROM
+          trnsact
+        WHERE
+          stype = 'P'
+          AND (
+            EXTRACT(
+              MONTH
+              FROM
+                saledate
+            ) <> 08
+            AND EXTRACT(
+              YEAR
+              FROM
+                saledate
+            ) <> 2005
+          )
+        HAVING
+          dayCount >= 20
+        GROUP BY
+          store,
+          mon,
+          yr
+      ) AS monthly_revenue ON minimum_revenue.revenue = monthly_revenue.revenue
+      AND minimum_revenue.store = monthly_revenue.store
+  ) AS min_month
+GROUP BY
+  min_month.mon
+
+```
+
+</details>
+&nbsp;
+
+Query Result:
+
+|mon|num_stores|
+|---|----------|
+|9  |212       |
+|10 |58        |
+|11 |54        |
+|12 |1         |
 
 &nbsp;
