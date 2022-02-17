@@ -634,6 +634,225 @@ Query Result:
 
 ## Exercise 10
 
+Which department, in which city and state of what store, had the greatest % increase in average daily sales revenue from November to December?
+
+<details>
+  <summary>query</summary>
+
+&nbsp;
+
+```SQL
+SELECT
+  TOP 1 change_by_store.store,
+  change_by_store.dept,
+  change_by_store.deptdesc,
+  change_by_store.percent_change,
+  s.city,
+  s.state
+FROM
+  (
+    SELECT
+      november.store,
+      november.dept,
+      november.deptdesc,
+      (
+        (
+          (
+            december.daily_average_dec - november.daily_average_nov
+          ) / november.daily_average_nov
+        ) * 100
+      ) AS percent_change
+    FROM
+      (
+        SELECT
+          t.store,
+          d.dept,
+          d.deptdesc,
+          (SUM(t.amt) / COUNT(DISTINCT t.saledate)) AS daily_average_nov
+        FROM
+          trnsact t
+          INNER JOIN skuinfo s ON t.sku = s.sku
+          INNER JOIN deptinfo d ON s.dept = d.dept
+        WHERE
+          t.stype = 'P'
+          AND (
+            EXTRACT(
+              MONTH
+              FROM
+                t.saledate
+            ) = 11
+          )
+        GROUP BY
+          t.store,
+          d.dept,
+          d.deptdesc
+      ) AS november
+      INNER JOIN (
+        SELECT
+          t.store,
+          d.dept,
+          d.deptdesc,
+          (SUM(t.amt) / COUNT(DISTINCT t.saledate)) AS daily_average_dec
+        FROM
+          trnsact t
+          INNER JOIN skuinfo s ON t.sku = s.sku
+          INNER JOIN deptinfo d ON s.dept = d.dept
+        WHERE
+          t.stype = 'P'
+          AND (
+            EXTRACT(
+              MONTH
+              FROM
+                t.saledate
+            ) = 12
+          )
+        GROUP BY
+          t.store,
+          d.dept,
+          d.deptdesc
+      ) AS december ON november.store = december.store
+  ) AS change_by_store
+  INNER JOIN strinfo s ON change_by_store.store = s.store
+ORDER BY
+  change_by_store.percent_change DESC;
+
+```
+
+</details>
+&nbsp;
+
+Query Result:
+
+|STORE|DEPT|DEPTDESC        |percent_change|CITY                                    |STATE|
+|-----|----|----------------|--------------|----------------------------------------|-----|
+|9304 |8104|COP KEY         |919335.00     |OKLAHOMA CITY                           |OK   |
+
+&nbsp;
+
+## Exercise 11
+
+In what state and zip code is the store that had the greatest total revenue during the time
+period monitored in our dataset?
+
+You will need to join two tables to answer this question, and will need to divide your answers up according to
+the “state” and “zip” fields. Make sure you include both of these fields in the SELECT and GROUP BY
+clauses. Don’t forget to specify that you only want to examine purchase transactions (not returns).
+
+If you have written your query correctly, you will find that the store with the 10th highest total revenue is in
+Hurst, TX.
+
+<details>
+  <summary>query</summary>
+
+&nbsp;
+
+```SQL
+SELECT
+  (
+    CASE
+      WHEN m.msa_high > 50
+      AND m.msa_high <= 60 THEN 'low'
+      WHEN m.msa_high > 60.01
+      AND m.msa_high <= 70 THEN 'medium'
+      WHEN m.msa_high > 70 THEN 'high'
+    END
+  ) AS education_level,
+  SUM(daily_total_revenue) / SUM(transact.num_days) AS daily_revenue
+FROM
+  (
+    SELECT
+      COUNT(DISTINCT saledate) AS num_days,
+      (
+        EXTRACT(
+          MONTH
+          FROM
+            saledate
+        )
+      ) AS months,
+      (
+        EXTRACT(
+          YEAR
+          FROM
+            saledate
+        )
+      ) AS years,
+      store,
+      SUM(amt) AS daily_total_revenue,
+      (
+        CASE
+          WHEN EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) = 8
+          AND EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) = 2005 THEN 'August 2005'
+        END
+      ) AS month_years
+    FROM
+      trnsact
+    GROUP BY
+      months,
+      years,
+      store,
+      month_years
+    WHERE
+      stype = 'P'
+      AND month_years IS NULL
+      AND EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) || EXTRACT(
+        YEAR
+        FROM
+          saledate
+      ) || store IN (
+        SELECT
+          EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) || EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) || store AS month_year_store
+        FROM
+          trnsact
+        GROUP BY
+          month_year_store
+        HAVING
+          COUNT(DISTINCT saledate) >= 20
+      )
+  ) AS transact
+  JOIN store_msa m ON transact.store = m.store
+GROUP BY
+  education_level
+ORDER BY
+  daily_revenue DESC,
+  education_level;
+
+```
+
+</details>
+&nbsp;
+
+Query Result:
+
+|education_level|daily_revenue|
+|---------------|-------------|
+|low            |34159.76     |
+|medium         |25037.89     |
+|high           |20937.31     |
+
+&nbsp;
+
+## Exercise 12
+
 In what state and zip code is the store that had the greatest total revenue during the time
 period monitored in our dataset?
 
