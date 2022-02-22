@@ -250,115 +250,727 @@ ORDER BY
 
 `Metairie, LA`
 
-## The store_msa table provides population statistics about the geographic location around a store. Using one query to retrieve your answer, how many MSAs are there within the state of North Carolina (abbreviated “NC”), and within these MSAs, what is the lowest population level (msa_pop) and highest income level (msa_income)?
+## Compare the average daily revenue (as defined in Teradata Week 5 Exercise Guide) of the store with the highest msa_income and the store with the lowest median msa_income (according to the msa_income field).  In what city and state were these two stores, and which store had a higher average daily revenue?
 
 Query:
 
 ```SQL
-SELECT store, msa_pop, msa_income
-FROM store_msa
-WHERE state='NC'
-ORDER BY msa_pop ASC, msa_income DESC;
+SELECT
+  store_info.store,
+  store_info.msa_income,
+  store_info.city,
+  store_info.state,
+  sum(store_info.tot_revenue) / sum(store_info.date_count) AS avg_revenue
+FROM
+  (
+    SELECT
+      s.store,
+      s.msa_income,
+      s.state,
+      s.city,
+      COUNT(DISTINCT t.saledate) AS date_count,
+      SUM(t.amt) AS tot_revenue
+    FROM
+      store_msa AS s
+      INNER JOIN (
+        SELECT
+          min(msa_income) AS min_income,
+          max(msa_income) AS max_income
+        FROM
+          store_msa
+      ) AS mm ON (
+        s.msa_income = mm.min_income
+        OR s.msa_income = mm.max_income
+      )
+      INNER JOIN trnsact AS t ON t.store = s.store
+    WHERE
+      t.stype = 'P'
+      AND (
+        EXTRACT(
+          YEAR
+          FROM
+            t.saledate
+        ) <> 2005
+        OR EXTRACT(
+          MONTH
+          FROM
+            t.saledate
+        ) <> 8
+      )
+    GROUP BY
+      s.store,
+      s.state,
+      s.city,
+      s.msa_income
+  ) AS store_info
+WHERE
+  store_info.date_count >= 20
+GROUP BY
+  store_info.store,
+  store_info.msa_income,
+  store_info.city,
+  store_info.state;
 ```
 
-`16 MSAs, lowest population of 339,511, highest income level of $36,151`
+`The store with the highest median msa_income was in Spanish Fort, AL.  It had a lower average daily revenue than the store with the lowest median msa_income, which was in McAllen, TX.`
 
-## What department (with department description), brand, style, and color brought in the greatest total amount of sales?
+## Divide the msa_income groups up so that msa_incomes between 1 and 20,000 are labeled 'low', msa_incomes between 20,001 and 30,000 are labeled 'med-low', msa_incomes between 30,001 and 40,000 are labeled 'med-high', and msa_incomes between 40,001 and 60,000 are labeled 'high'.  Which of these groups has the highest average daily revenue (as defined in Teradata Week 5 Exercise Guide) per store?
 
 Query:
 
 ```SQL
-SELECT TOP 5 d.dept, d.deptdesc, SUM(t.amt) as total_amount, s.brand, s.style, s.color
-FROM trnsact t INNER JOIN skuinfo s ON t.sku=s.sku
-INNER JOIN deptinfo d ON s.dept=d.dept
-WHERE stype='P'
-GROUP BY d.dept, d.deptdesc, s.brand, s.style, s.color
-ORDER BY total_amount DESC
+SELECT
+  (
+    CASE
+      WHEN m.msa_income > 1
+      AND m.msa_income <= 20000 THEN 'low'
+      WHEN m.msa_income > 20001
+      AND m.msa_income <= 30000 THEN 'med-low'
+      WHEN m.msa_income > 30001
+      AND m.msa_income <= 40000 THEN 'med-high'
+      WHEN m.msa_income > 40001
+      AND m.msa_income <= 60000 THEN 'high'
+    END
+  ) AS income,
+  SUM(daily_total_revenue) / SUM(transact.num_days) AS daily_revenue
+FROM
+  (
+    SELECT
+      COUNT(DISTINCT saledate) AS num_days,
+      (
+        EXTRACT(
+          MONTH
+          FROM
+            saledate
+        )
+      ) AS months,
+      (
+        EXTRACT(
+          YEAR
+          FROM
+            saledate
+        )
+      ) AS years,
+      store,
+      SUM(amt) AS daily_total_revenue,
+      (
+        CASE
+          WHEN EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) = 8
+          AND EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) = 2005 THEN 'August 2005'
+        END
+      ) AS month_years
+    FROM
+      trnsact
+    GROUP BY
+      months,
+      years,
+      store,
+      month_years
+    WHERE
+      stype = 'P'
+      AND month_years IS NULL
+      AND EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) || EXTRACT(
+        YEAR
+        FROM
+          saledate
+      ) || store IN (
+        SELECT
+          EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) || EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) || store AS month_year_store
+        FROM
+          trnsact
+        GROUP BY
+          month_year_store
+        HAVING
+          COUNT(DISTINCT saledate) >= 20
+      )
+  ) AS transact
+  JOIN store_msa m ON transact.store = m.store
+GROUP BY
+  income
+ORDER BY
+  daily_revenue DESC,
+  income;
 ```
 
-`Department 800 described as Clinique, brand Clinique, style 6142, color DDML`
+Query result:
 
-## How many stores have more than 180,000 distinct skus associated with them in the skstinfo table?
+|income  |daily_revenue|
+|--------|-------------|
+|low     |34159.76     |
+|med-high|21999.69     |
+|med-low |19312.10     |
+|high    |18129.42     |
+
+`low`
+
+## Divide stores up so that stores with msa populations between 1 and 100,000 are labeled 'very small', stores with msa populations between 100,001 and 200,000 are labeled 'small', stores with msa populations between 200,001 and 500,000 are labeled 'med_small', stores with msa populations between 500,001 and 1,000,000 are labeled 'med_large', stores with msa populations between 1,000,001 and 5,000,000 are labeled “large”, and stores with msa_population greater than 5,000,000 are labeled “very large”.  What is the average daily revenue (as defined in Teradata Week 5 Exercise Guide) for a store in a “very large” population msa?
 
 Query:
 
 ```SQL
-SELECT DISTINCT sm.store as store, COUNT(DISTINCT s.sku)
-FROM store_msa sm INNER JOIN skstinfo s ON sm.store=s.store
-HAVING COUNT(DISTINCT s.sku) > 180000
-GROUP BY sm.store
+SELECT
+  (
+    CASE
+      WHEN m.msa_pop >= 1
+      AND m.msa_pop <= 100000 THEN 'very small'
+      WHEN m.msa_pop >= 100001
+      AND m.msa_pop <= 200000 THEN 'small'
+      WHEN m.msa_pop >= 200001
+      AND m.msa_pop <= 500000 THEN 'med_small'
+      WHEN m.msa_pop >= 500001
+      AND m.msa_pop <= 1000000 THEN 'med_large'
+      WHEN m.msa_pop >= 1000001
+      AND m.msa_pop <= 5000000 THEN 'large'
+      WHEN m.msa_pop > 5000000 THEN 'very large'
+    END
+  ) AS population_size,
+  SUM(daily_total_revenue) / SUM(transact.num_days) AS daily_revenue
+FROM
+  (
+    SELECT
+      COUNT(DISTINCT saledate) AS num_days,
+      (
+        EXTRACT(
+          MONTH
+          FROM
+            saledate
+        )
+      ) AS months,
+      (
+        EXTRACT(
+          YEAR
+          FROM
+            saledate
+        )
+      ) AS years,
+      store,
+      SUM(amt) AS daily_total_revenue,
+      (
+        CASE
+          WHEN EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) = 8
+          AND EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) = 2005 THEN 'August 2005'
+        END
+      ) AS month_years
+    FROM
+      trnsact
+    GROUP BY
+      months,
+      years,
+      store,
+      month_years
+    WHERE
+      stype = 'P'
+      AND month_years IS NULL
+      AND EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) || EXTRACT(
+        YEAR
+        FROM
+          saledate
+      ) || store IN (
+        SELECT
+          EXTRACT(
+            MONTH
+            FROM
+              saledate
+          ) || EXTRACT(
+            YEAR
+            FROM
+              saledate
+          ) || store AS month_year_store
+        FROM
+          trnsact
+        GROUP BY
+          month_year_store
+        HAVING
+          COUNT(DISTINCT saledate) >= 20
+      )
+  ) AS transact
+  JOIN store_msa m ON transact.store = m.store
+GROUP BY
+  population_size
+ORDER BY
+  daily_revenue DESC,
+  population_size;
 ```
 
-`12`
+Query result:
 
-## Look at the data from all the distinct skus in the “cop” department with a “federal” brand and a “rinse wash” color. You'll see that these skus have the same values in some of the columns, meaning that they have some features in common.
+|population_size|daily_revenue|
+|---------------|-------------|
+|very large     |25451.53     |
+|med_large      |24341.59     |
+|large          |22107.57     |
+|med_small      |21208.43     |
+|small          |16355.16     |
+|very small     |12688.25     |
 
-In which columns do these skus have different values from one another, meaning that their features differ in the categories represented by the columns? Choose all that apply. Note that you will need more than a single correct selection to answer the question correctly.
+`$25,452`
+
+## Which department in which store had the greatest percent increase in average daily sales revenue from November to December, and what city and state was that store located in?   Only examine departments whose total sales were at least $1,000 in both November and December
+
 Query:
 
 ```SQL
-SELECT DISTINCT s.sku, d.dept, d.deptdesc, s.brand, s.color, s.style, s.size, s.vendor, s.packsize
-FROM skuinfo s INNER JOIN deptinfo d ON s.dept=d.dept
-WHERE deptdesc='cop' AND brand='federal' AND color='rinse wash'
+SELECT
+  store_info.store,
+  dept_info.dept,
+  dept_info.deptdesc,
+  s.city,
+  s.state,
+  (
+    (
+      (
+        (dept_info.dec_amt / store_info.dec_days) - (dept_info.nov_amt / store_info.nov_days)
+      ) / (dept_info.nov_amt / store_info.nov_days)
+    ) * 100
+  ) AS percent_change,
+  dept_info.nov_amt,
+  store_info.nov_days,
+  dept_info.dec_amt,
+  store_info.dec_days,
+  (dept_info.nov_amt / store_info.nov_days) AS daily_average_nov,
+  (dept_info.dec_amt / store_info.dec_days) AS daily_average_dec
+FROM
+  (
+    SELECT
+      t.store,
+      count(
+        DISTINCT CASE
+          WHEN extract(
+            MONTH
+            FROM
+              t.saledate
+          ) = 11 THEN t.saledate
+        END
+      ) AS nov_days,
+      count(
+        DISTINCT CASE
+          WHEN extract(
+            MONTH
+            FROM
+              t.saledate
+          ) = 12 THEN t.saledate
+        END
+      ) AS dec_days
+    FROM
+      trnsact t
+    WHERE
+      t.stype = 'p'
+    HAVING
+      nov_days >= 20
+      AND dec_days >= 20
+    GROUP BY
+      t.store
+  ) AS store_info
+  INNER JOIN (
+    SELECT
+      t.store,
+      d.dept,
+      d.deptdesc,
+      SUM(
+        CASE
+          WHEN extract(
+            MONTH
+            FROM
+              t.saledate
+          ) = 11 THEN t.amt
+        END
+      ) AS nov_amt,
+      SUM(
+        CASE
+          WHEN extract(
+            MONTH
+            FROM
+              t.saledate
+          ) = 12 THEN t.amt
+        END
+      ) AS dec_amt
+    FROM
+      trnsact t
+      INNER JOIN skuinfo s ON t.sku = s.sku
+      INNER JOIN deptinfo d ON s.dept = d.dept
+    WHERE
+      t.stype = 'p'
+    HAVING
+      nov_amt >= 1000
+      AND dec_amt >= 1000
+    GROUP BY
+      t.store,
+      d.dept,
+      d.deptdesc
+  ) AS dept_info ON store_info.store = dept_info.store
+  INNER JOIN strinfo s ON dept_info.store = s.store
+WHERE
+  (
+    dept_info.deptdesc = 'JACQUES'
+    AND s.city = 'JACKSON'
+    AND s.state = 'MS'
+  )
+  OR (
+    dept_info.deptdesc = 'CLINIQUE'
+    AND s.city = 'ODESSA'
+    AND s.state = 'TX'
+  )
+  OR (
+    dept_info.deptdesc = 'LOUISVL'
+    AND s.city = 'SALINA'
+    AND s.state = 'KS'
+  )
+  OR (
+    dept_info.deptdesc = 'GOTTEX'
+    AND s.city = 'PINE BLUFF'
+    AND s.state = 'AR'
+  )
+GROUP BY
+  store_info.store,
+  dept_info.dept,
+  dept_info.deptdesc,
+  dept_info.nov_amt,
+  store_info.nov_days,
+  dept_info.dec_amt,
+  store_info.dec_days,
+  s.city,
+  s.state
+ORDER BY
+  percent_change DESC;
 ```
 
-`style, size`
+`Louisvl department, Salina, KS`
 
-## How many skus are in the skuinfo table, but NOT in the skstinfo table?
+## Which department within a particular store had the greatest decrease in average daily sales revenue from August to September, and in what city and state was that store located?
 
 Query:
 
 ```SQL
-SELECT COUNT(DISTINCT sku)
-FROM skuinfo;
+SELECT
+  store_info.store,
+  dept_info.dept,
+  dept_info.deptdesc,
+  s.city,
+  s.state,
+  (
+    (dept_info.sep_amt / store_info.sep_days) - (dept_info.aug_amt / store_info.aug_days)
+  ) AS revenue_change,
+  (dept_info.aug_amt / store_info.aug_days) AS daily_average_aug,
+  dept_info.aug_amt,
+  store_info.aug_days,
+  (dept_info.sep_amt / store_info.sep_days) AS daily_average_sep,
+  dept_info.sep_amt,
+  store_info.sep_days
+FROM
+  (
+    SELECT
+      t.store,
+      count(
+        DISTINCT CASE
+          WHEN (
+            extract(
+              MONTH
+              FROM
+                t.saledate
+            ) = 08
+            AND extract(
+              YEAR
+              FROM
+                t.saledate
+            ) = 2004
+          ) THEN t.saledate
+        END
+      ) AS aug_days,
+      count(
+        DISTINCT CASE
+          WHEN (
+            extract(
+              MONTH
+              FROM
+                t.saledate
+            ) = 09
+            AND extract(
+              YEAR
+              FROM
+                t.saledate
+            ) = 2004
+          ) THEN t.saledate
+        END
+      ) AS sep_days
+    FROM
+      trnsact t
+    WHERE
+      t.stype = 'p'
+    HAVING
+      aug_days >= 20
+      AND sep_days >= 20
+    GROUP BY
+      t.store
+  ) AS store_info
+  INNER JOIN (
+    SELECT
+      t.store,
+      d.dept,
+      d.deptdesc,
+      SUM(
+        CASE
+          WHEN (
+            extract(
+              MONTH
+              FROM
+                t.saledate
+            ) = 08
+            AND extract(
+              YEAR
+              FROM
+                t.saledate
+            ) = 2004
+          ) THEN t.amt
+        END
+      ) AS aug_amt,
+      SUM(
+        CASE
+          WHEN (
+            extract(
+              MONTH
+              FROM
+                t.saledate
+            ) = 09
+            AND extract(
+              YEAR
+              FROM
+                t.saledate
+            ) = 2004
+          ) THEN t.amt
+        END
+      ) AS sep_amt
+    FROM
+      trnsact t
+      INNER JOIN skuinfo s ON t.sku = s.sku
+      INNER JOIN deptinfo d ON s.dept = d.dept
+    WHERE
+      t.stype = 'p'
+    HAVING
+      aug_amt >= 1000
+      AND sep_amt >= 1000
+    GROUP BY
+      t.store,
+      d.dept,
+      d.deptdesc
+  ) AS dept_info ON store_info.store = dept_info.store
+  INNER JOIN strinfo s ON dept_info.store = s.store
+GROUP BY
+  store_info.store,
+  dept_info.dept,
+  dept_info.deptdesc,
+  dept_info.aug_amt,
+  store_info.aug_days,
+  dept_info.sep_amt,
+  store_info.sep_days,
+  s.city,
+  s.state
+ORDER BY
+  revenue_change DESC;
 
-SELECT COUNT(DISTINCT sku)
-FROM skstinfo;
 ```
 
-`803,966`
+`Clinique department, Louisville, KY`
 
-## In what city and state is the store that had the greatest total sum of sales?
+## Identify which department, in which city and state of what store, had the greatest DECREASE in the number of items sold from August to September.  How many fewer items did that department sell in September compared to August?
 
 Query:
 
 ```SQL
-SELECT SUM(t.amt) as total_amount, t.store, s.city, s.state
-FROM trnsact t JOIN store_msa s ON t.store=s.store
-WHERE stype='P'
-GROUP BY t.store, s.city, s.state
-ORDER BY total_amount DESC
+SELECT
+  TOP 5 dept_info.store,
+  dept_info.dept,
+  dept_info.deptdesc,
+  s.city,
+  s.state,
+  (dept_info.sep_quantity - dept_info.aug_quantity) AS quantity_change,
+  dept_info.aug_quantity,
+  dept_info.sep_quantity
+FROM
+  (
+    SELECT
+      t.store,
+      d.dept,
+      d.deptdesc,
+      SUM(
+        CASE
+          WHEN (
+            extract(
+              MONTH
+              FROM
+                t.saledate
+            ) = 08
+            AND extract(
+              YEAR
+              FROM
+                t.saledate
+            ) = 2004
+          ) THEN t.quantity
+        END
+      ) AS aug_quantity,
+      SUM(
+        CASE
+          WHEN (
+            extract(
+              MONTH
+              FROM
+                t.saledate
+            ) = 09
+            AND extract(
+              YEAR
+              FROM
+                t.saledate
+            ) = 2004
+          ) THEN t.quantity
+        END
+      ) AS sep_quantity
+    FROM
+      trnsact t
+      INNER JOIN skuinfo s ON t.sku = s.sku
+      INNER JOIN deptinfo d ON s.dept = d.dept
+    WHERE
+      t.stype = 'p'
+    HAVING
+      aug_quantity >= 1
+      AND sep_quantity >= 1
+    GROUP BY
+      t.store,
+      d.dept,
+      d.deptdesc
+  ) AS dept_info
+  INNER JOIN strinfo s ON dept_info.store = s.store
+GROUP BY
+  dept_info.store,
+  dept_info.dept,
+  dept_info.deptdesc,
+  dept_info.aug_quantity,
+  dept_info.sep_quantity,
+  s.city,
+  s.state
+ORDER BY
+  quantity_change ASC;
 ```
 
-`Metairie, LA`
+`The Clinique department in Louisville, KY sold 13,491 fewer items`
 
-## Given Table A (first table to be entered in the query) and Table B (second table to be entered in the query) the query result shown below is a result of what kind of join?
-
-`Left Join`
-
-## How many states have more than 10 Dillards stores in them?
+## For each store, determine the month with the minimum average daily revenue (as defined in Teradata Week 5 Exercise Guide) .  For each of the twelve months of the year,  count how many stores' minimum average daily revenue was in that month.  During which month(s) did over 100 stores have their minimum average daily revenue?
 
 Query:
 
 ```SQL
-SELECT DISTINCT state, COUNT(DISTINCT store) as stores
-FROM strinfo
-HAVING COUNT(DISTINCT store) > 10
-GROUP BY state
-ORDER BY stores DESC;
+SELECT
+  monthly_data.mon,
+  count(monthly_data.store) AS num_stores
+FROM
+  (
+    SELECT
+      store,
+      count(DISTINCT saledate) AS dayCount,
+      EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) AS mon,
+      (SUM(amt) / count(DISTINCT saledate)) AS avg_daily_revenue,
+      (
+        ROW_NUMBER() OVER (
+          PARTITION BY store
+          ORDER BY
+            (SUM(amt) / count(DISTINCT saledate)) ASC
+        )
+      ) AS ranking
+    FROM
+      trnsact
+    WHERE
+      stype = 'P'
+      AND saledate < '2005-08-01'
+    HAVING
+      dayCount >= 20
+    GROUP BY
+      store,
+      mon
+  ) AS monthly_data
+WHERE
+  monthly_data.ranking = 1
+GROUP BY
+  monthly_data.mon
+ORDER BY
+  num_stores DESC
 ```
 
-`15`
+`August only`
 
-## What is the suggested retail price of all the skus in the “reebok” department with the “skechers” brand and a “wht/saphire” color?
+## Write a query that determines the month in which each store had its maximum number of sku units returned.  During which month did the greatest number of stores have their maximum number of sku units returned?
 
 Query:
 
 ```SQL
-SELECT d.deptdesc, s.brand, s.color, t.sprice
-FROM trnsact t INNER JOIN skuinfo s ON t.sku=s.sku
-INNER JOIN deptinfo d ON s.dept=d.dept
-WHERE d.deptdesc='reebok' AND s.brand='skechers' AND s.color='wht/saphire'
+SELECT
+  monthly_data.mon,
+  count(monthly_data.store) AS num_stores
+FROM
+  (
+    SELECT
+      store,
+      EXTRACT(
+        MONTH
+        FROM
+          saledate
+      ) AS mon,
+      count(quantity) AS quantity,
+      (
+        ROW_NUMBER() OVER (
+          PARTITION BY store
+          ORDER BY
+            count(quantity) DESC
+        )
+      ) AS ranking
+    FROM
+      trnsact
+    WHERE
+      stype = 'R'
+      AND saledate < '2005-08-01'
+    GROUP BY
+      store,
+      mon
+  ) AS monthly_data
+WHERE
+  monthly_data.ranking = 1
+GROUP BY
+  monthly_data.mon
+ORDER BY
+  num_stores DESC
 ```
 
-`$29.00`
+`Write a query that determines the month in which each store had its maximum number of sku units returned.  During which month did the greatest number of stores have their maximum number of sku units returned?`
